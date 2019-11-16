@@ -158,6 +158,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="TutorialApp.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="libs.h" />
+    <ClInclude Include="TutorialApp.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
