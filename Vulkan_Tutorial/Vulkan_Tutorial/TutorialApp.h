@@ -15,6 +15,12 @@ struct QueueFamilyIndices
     }
 };
 
+struct SwapChainSupportDetails {
+    VkSurfaceCapabilitiesKHR capabilities;
+    std::vector<VkSurfaceFormatKHR> formats;
+    std::vector<VkPresentModeKHR> presentModes;
+};
+
 
 class TutorialApp
 {
@@ -26,7 +32,7 @@ public:
     unsigned int windowHeight;
     std::string windowName;
     GLFWwindow* window;
-    std::vector<const char*> validationLayers;
+    
 
     void run();
 
@@ -46,7 +52,16 @@ private:
     VkQueue graphicsQueue;
     VkQueue presentQueue;
 
+    /* Swap chain */
+    VkSwapchainKHR swapChain;
+    VkFormat swapChainImageFormat;
+    VkExtent2D swapChainExtent;
 
+    /* Swap chain image handles */
+    std::vector<VkImage> swapChainImages;
+
+    std::vector<const char*> validationLayers;
+    std::vector<const char*> deviceExtensions;
 #ifdef NDEBUG
     const bool enableValidationLayers = true;
 #else
@@ -58,6 +73,8 @@ private:
     void createSurface();
     void pickPhysicalDevice();
     void createLogicalDevice();
+    bool checkDeviceExtensionSupport(VkPhysicalDevice device);
+    void createSwapChain();
 
 
     void initGLFW();
@@ -66,6 +83,11 @@ private:
     bool checkValidationLayerSupport();
     bool isDeviceSuitable( VkPhysicalDevice device );
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
+    
+    VkSurfaceFormatKHR chooseSwapSurfaceFormat( const std::vector<VkSurfaceFormatKHR>& availableFormats );
+    VkPresentModeKHR chooseSwapPresentMode( const std::vector<VkPresentModeKHR>& availablePresentModes );
+    VkExtent2D chooseSwapExtent( const VkSurfaceCapabilitiesKHR& capabilities );
 
     void mainLoop();
 

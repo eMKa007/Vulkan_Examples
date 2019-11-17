@@ -10,6 +10,8 @@
 #include <mat4x4.hpp>
 
 #include <iostream>
+#include <cstdint>
+#include <algorithm>
 #include <vector>
 #include <optional>
 #include <set>
