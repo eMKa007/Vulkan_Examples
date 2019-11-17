@@ -6,9 +6,12 @@ struct QueueFamilyIndices
 {
     std::optional<uint32_t> graphicsFamily;
 
+    /* Ability to present on surface */
+    std::optional<uint32_t> presentFamily;
+
     bool isComplete()
     {
-        return graphicsFamily.has_value();
+        return graphicsFamily.has_value() && presentFamily.has_value();
     }
 };
 
@@ -28,13 +31,21 @@ public:
     void run();
 
 private:
+    /* Instance */
     VkInstance instance;
-    
+
+    /* Surface */
+    VkSurfaceKHR surface;
+
+    /* Device */
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     std::vector<VkPhysicalDevice> devices;
     VkDevice device;
 
+    /* Queues */
     VkQueue graphicsQueue;
+    VkQueue presentQueue;
+
 
 #ifdef NDEBUG
     const bool enableValidationLayers = true;
@@ -44,6 +55,7 @@ private:
 
     void initVulkan();
     void createInstance();
+    void createSurface();
     void pickPhysicalDevice();
     void createLogicalDevice();
 
