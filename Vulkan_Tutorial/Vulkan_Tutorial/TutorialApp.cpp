@@ -25,6 +25,9 @@ void TutorialApp::initVulkan()
 {
     this->createInstance();
     this->pickPhysicalDevice();
+    this->createLogicalDevice();
+
+
     this->initGLFW();
     this->initWindow();
 }
@@ -91,6 +94,46 @@ void TutorialApp::pickPhysicalDevice()
 
     if( this->physicalDevice == VK_NULL_HANDLE )
         throw std::runtime_error("Failed to find a suitable GPU!");
+}
+
+void TutorialApp::createLogicalDevice()
+{
+    QueueFamilyIndices indices = findQueueFamilies(this->physicalDevice);
+
+    VkDeviceQueueCreateInfo queueCreateInfo = {};
+    queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
+    queueCreateInfo.queueCount = 1;
+
+    float queuePriority = 1.0f;
+    queueCreateInfo.pQueuePriorities = &queuePriority;
+
+    VkPhysicalDeviceFeatures deviceFeatures = {};
+
+    VkDeviceCreateInfo createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    createInfo.pQueueCreateInfos = &queueCreateInfo;
+    createInfo.queueCreateInfoCount = 1;
+    createInfo.pEnabledFeatures = &deviceFeatures;
+
+    createInfo.enabledExtensionCount = 0;
+
+    if( enableValidationLayers )
+    {
+        createInfo.enabledLayerCount = static_cast<uint32_t>(this->validationLayers.size());
+        createInfo.ppEnabledLayerNames = this->validationLayers.data();
+    }
+    else
+    {
+        createInfo.enabledLayerCount = 0;
+    }
+
+    if( vkCreateDevice(this->physicalDevice, &createInfo, nullptr, &this->device) != VK_SUCCESS )
+    {
+        throw new std::runtime_error("Failed to create logical device! ");
+    }
+
+    vkGetDeviceQueue(this->device, indices.graphicsFamily.value(), 0, &this->graphicsQueue);
 }
 
 QueueFamilyIndices TutorialApp::findQueueFamilies(VkPhysicalDevice device)
@@ -189,6 +232,7 @@ void TutorialApp::mainLoop()
 
 void TutorialApp::cleanup()
 {
+    vkDestroyDevice(this->device, nullptr);
     vkDestroyInstance(this->instance, nullptr);
 
     glfwDestroyWindow(this->window);

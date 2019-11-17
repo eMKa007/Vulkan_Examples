@@ -29,9 +29,12 @@ public:
 
 private:
     VkInstance instance;
+    
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     std::vector<VkPhysicalDevice> devices;
+    VkDevice device;
 
+    VkQueue graphicsQueue;
 
 #ifdef NDEBUG
     const bool enableValidationLayers = true;
@@ -42,12 +45,15 @@ private:
     void initVulkan();
     void createInstance();
     void pickPhysicalDevice();
-    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+    void createLogicalDevice();
+
+
     void initGLFW();
     void initWindow();
 
     bool checkValidationLayerSupport();
     bool isDeviceSuitable( VkPhysicalDevice device );
+    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 
     void mainLoop();
 
