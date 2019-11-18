@@ -33,6 +33,7 @@ void TutorialApp::initVulkan()
     this->pickPhysicalDevice();
     this->createLogicalDevice();
     this->createSwapChain();
+    this->createImageViews();
 }
 
 void TutorialApp::createInstance()
@@ -84,10 +85,10 @@ void TutorialApp::pickPhysicalDevice()
     if( deviceCount == 0 )
         throw std::runtime_error("Failed to find GPUs with Vulkan support!");
 
-    this->devices.resize(deviceCount);
-    vkEnumeratePhysicalDevices(this->instance, &deviceCount, this->devices.data());
+    std::vector<VkPhysicalDevice> devices(deviceCount);
+    vkEnumeratePhysicalDevices(this->instance, &deviceCount, devices.data());
 
-    for (const auto& element : this->devices)
+    for (const auto& element : devices)
     {
         if( isDeviceSuitable(element) )
         {    this->physicalDevice = element;
@@ -245,6 +246,38 @@ void TutorialApp::createSwapChain()
 
     this->swapChainImageFormat = surfaceFormat.format;
     this->swapChainExtent = extent;
+}
+
+void TutorialApp::createImageViews()
+{
+    this->swapChainImageViews.resize(swapChainImages.size());
+
+    /*
+     * Loop through all images to create image view for every of them.
+     */
+    for ( unsigned int i = 0; i < swapChainImages.size(); i++)
+    {
+        VkImageViewCreateInfo createInfo = {};
+        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        createInfo.image = swapChainImages[i];
+
+        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format = this->swapChainImageFormat;
+
+        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.baseMipLevel = 0;
+        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.baseArrayLayer = 0;
+        createInfo.subresourceRange.layerCount = 1;
+
+        if( vkCreateImageView( this->device, &createInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS)
+            throw new std::runtime_error("Failed to create Image View!");
+    }
 }
 
 void TutorialApp::createSurface()
@@ -444,6 +477,9 @@ void TutorialApp::mainLoop()
 
 void TutorialApp::cleanup()
 {
+    for (auto imageView : this->swapChainImageViews)
+        vkDestroyImageView(this->device, imageView, nullptr);
+
     vkDestroySwapchainKHR(device, swapChain, nullptr);
     vkDestroyDevice(this->device, nullptr);
     vkDestroySurfaceKHR(this->instance, this->surface, nullptr);

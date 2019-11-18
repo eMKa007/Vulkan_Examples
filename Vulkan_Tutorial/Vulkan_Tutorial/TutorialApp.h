@@ -45,7 +45,6 @@ private:
 
     /* Device */
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-    std::vector<VkPhysicalDevice> devices;
     VkDevice device;
 
     /* Queues */
@@ -60,6 +59,9 @@ private:
     /* Swap chain image handles */
     std::vector<VkImage> swapChainImages;
 
+    /* Image Views */
+    std::vector<VkImageView> swapChainImageViews;
+
     std::vector<const char*> validationLayers;
     std::vector<const char*> deviceExtensions;
 #ifdef NDEBUG
@@ -68,6 +70,7 @@ private:
     const bool enableValidationLayers = false;
 #endif
 
+    /* Initialize Vulkan API */
     void initVulkan();
     void createInstance();
     void createSurface();
@@ -75,11 +78,13 @@ private:
     void createLogicalDevice();
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);
     void createSwapChain();
+    void createImageViews();
 
-
+    /* Initialize GLFW */
     void initGLFW();
     void initWindow();
 
+    /* Auxiliary Functions */
     bool checkValidationLayerSupport();
     bool isDeviceSuitable( VkPhysicalDevice device );
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
@@ -90,7 +95,6 @@ private:
     VkExtent2D chooseSwapExtent( const VkSurfaceCapabilitiesKHR& capabilities );
 
     void mainLoop();
-
     void cleanup();
 };
 
