@@ -79,6 +79,7 @@ private:
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);
     void createSwapChain();
     void createImageViews();
+    void createGraphicsPipeline();
 
     /* Initialize GLFW */
     void initGLFW();
@@ -93,8 +94,30 @@ private:
     VkSurfaceFormatKHR chooseSwapSurfaceFormat( const std::vector<VkSurfaceFormatKHR>& availableFormats );
     VkPresentModeKHR chooseSwapPresentMode( const std::vector<VkPresentModeKHR>& availablePresentModes );
     VkExtent2D chooseSwapExtent( const VkSurfaceCapabilitiesKHR& capabilities );
+    VkShaderModule createShaderModule( const std::vector<char>& code );
 
     void mainLoop();
     void cleanup();
 };
 
+static std::vector<char> readFile( const std::string& filename )
+{
+    /* 
+     * ate - Start reading from the end of file
+     * binary - read the file as binary file (avoid text transformations)
+     */
+    std::ifstream file(filename, std::ios::ate || std::ios::binary );
+
+    if( !file.is_open() )
+        throw new std::runtime_error("Failed to open file!");
+
+    size_t fileSize = (size_t) file.tellg();    /* Current position in the stream */
+    std::vector<char> buffer(fileSize);
+
+    file.seekg(0);  /* Move back to the first position */
+    file.read( buffer.data(), fileSize);
+
+    file.close();
+
+    return buffer;
+}

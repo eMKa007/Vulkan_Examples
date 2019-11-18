@@ -9,12 +9,14 @@
 #include <vec4.hpp>
 #include <mat4x4.hpp>
 
-#include <iostream>
-#include <cstdint>
 #include <algorithm>
-#include <vector>
+#include <iostream>
 #include <optional>
+#include <cstdint>
+#include <fstream>
+#include <vector>
 #include <set>
+
 
 #include "TutorialApp.h"
 
