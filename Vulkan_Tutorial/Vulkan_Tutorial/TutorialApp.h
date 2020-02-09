@@ -62,6 +62,9 @@ private:
     /* Image Views */
     std::vector<VkImageView> swapChainImageViews;
 
+    /* Pipeline Layouts */
+    VkPipelineLayout pipelineLayout;
+
     std::vector<const char*> validationLayers;
     std::vector<const char*> deviceExtensions;
 #ifdef NDEBUG
@@ -106,7 +109,7 @@ static std::vector<char> readFile( const std::string& filename )
      * ate - Start reading from the end of file
      * binary - read the file as binary file (avoid text transformations)
      */
-    std::ifstream file(filename, std::ios::ate || std::ios::binary );
+    std::ifstream file(filename, std::ios::ate | std::ios::binary );
 
     if( !file.is_open() )
         throw new std::runtime_error("Failed to open file!");

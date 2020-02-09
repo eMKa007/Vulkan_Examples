@@ -2,10 +2,9 @@
 
 int main() 
 {
-    std::unique_ptr<TutorialApp> app = std::make_unique<TutorialApp>(800, 600, "VulkanWindow");
-
     try
     {
+        std::unique_ptr<TutorialApp> app = std::make_unique<TutorialApp>(800, 600, "VulkanWindow");
         app->run();
     } 
     catch ( const std::exception& ex)
