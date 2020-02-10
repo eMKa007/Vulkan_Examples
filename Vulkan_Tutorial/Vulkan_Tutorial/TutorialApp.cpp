@@ -16,10 +16,7 @@ TutorialApp::TutorialApp( unsigned int windowWidth, unsigned int windowHeight, s
 }
 
 
-TutorialApp::~TutorialApp()
-{
-   vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-}
+TutorialApp::~TutorialApp() { }
 
 void TutorialApp::run()
 {
@@ -35,6 +32,7 @@ void TutorialApp::initVulkan()
     this->createLogicalDevice();
     this->createSwapChain();
     this->createImageViews();
+    this->createRenderPass();
     this->createGraphicsPipeline();
 }
 
@@ -282,6 +280,40 @@ void TutorialApp::createImageViews()
     }
 }
 
+void TutorialApp::createRenderPass()
+{
+    VkAttachmentDescription colorAttachment = {};
+    colorAttachment.format  = this->swapChainImageFormat;
+    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;  // Clear data in attachment before rendering.
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // Store rendered contents in memory, so it can be read later.
+    colorAttachment.stencilLoadOp   = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp  = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout   = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout     = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    VkAttachmentReference colorAttachmentRef = {};
+    colorAttachmentRef.attachment   = 0;
+    colorAttachmentRef.layout       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass = {};
+    subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount    = 1;
+    subpass.pColorAttachments       = &colorAttachmentRef;
+
+    VkRenderPassCreateInfo renderPassInfo = {};
+    renderPassInfo.sType        = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount  = 1;
+    renderPassInfo.pAttachments     = &colorAttachment;
+    renderPassInfo.subpassCount     = 1;
+    renderPassInfo.pSubpasses       = &subpass;
+
+    if( vkCreateRenderPass(this->device, &renderPassInfo, nullptr, &this->renderPass) != VK_SUCCESS )
+    {
+        throw std::runtime_error("Failed to create render pass. :( \n");
+    }
+}
+
 void TutorialApp::createGraphicsPipeline()
 {
     auto vertShaderCode = readFile("shaders/vert.spv");
@@ -425,18 +457,13 @@ void TutorialApp::createGraphicsPipeline()
         throw std::runtime_error("Failed to create pipeline layout! :(\n");
     }
     
+    /* Create Render Pass */
+    
+
+
     /* Tidy up unused objects */
     vkDestroyShaderModule(this->device, fragShaderModule, nullptr);
     vkDestroyShaderModule(this->device, vertShaderModule, nullptr);
-}
-
-/* 
-*  Initialize properties for graphics pipeline stages.
-*  Viewport size, color blending function (...);
-*/
-void TutorialApp::initFixedFunctions()
-{
-
 }
 
 void TutorialApp::createSurface()
@@ -650,11 +677,15 @@ void TutorialApp::mainLoop()
 
 void TutorialApp::cleanup()
 {
+    vkDestroyPipelineLayout(this->device, this->pipelineLayout, nullptr);
+    vkDestroyRenderPass(this->device, this->renderPass, nullptr);
+
     for (auto imageView : this->swapChainImageViews)
         vkDestroyImageView(this->device, imageView, nullptr);
 
     vkDestroySwapchainKHR(device, swapChain, nullptr);
     vkDestroyDevice(this->device, nullptr);
+
     vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
     vkDestroyInstance(this->instance, nullptr);
 

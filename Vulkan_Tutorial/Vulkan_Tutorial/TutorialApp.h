@@ -63,6 +63,7 @@ private:
     std::vector<VkImageView> swapChainImageViews;
 
     /* Pipeline Layouts */
+    VkRenderPass renderPass;
     VkPipelineLayout pipelineLayout;
 
     std::vector<const char*> validationLayers;
@@ -82,6 +83,7 @@ private:
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);
     void createSwapChain();
     void createImageViews();
+    void createRenderPass();
     void createGraphicsPipeline();
 
     /* Initialize GLFW */
