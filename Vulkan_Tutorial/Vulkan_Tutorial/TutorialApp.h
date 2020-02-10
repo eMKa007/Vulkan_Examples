@@ -66,6 +66,9 @@ private:
     VkRenderPass renderPass;
     VkPipelineLayout pipelineLayout;
 
+    /* Main Graphics Pipeline */
+    VkPipeline graphicsPipeline;
+
     std::vector<const char*> validationLayers;
     std::vector<const char*> deviceExtensions;
 #ifdef NDEBUG

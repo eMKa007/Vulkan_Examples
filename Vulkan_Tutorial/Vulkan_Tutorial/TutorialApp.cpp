@@ -453,13 +453,32 @@ void TutorialApp::createGraphicsPipeline()
     pipelineLayoutInfo.pPushConstantRanges    = nullptr;  // Optional
    
     if( vkCreatePipelineLayout(this->device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
-    {
         throw std::runtime_error("Failed to create pipeline layout! :(\n");
-    }
     
-    /* Create Render Pass */
+    /* Combine structures to create pipeline */
+    VkGraphicsPipelineCreateInfo pipelineInfo = {};
+    pipelineInfo.sType      = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineInfo.stageCount = 2;
+    pipelineInfo.pStages    = shaderStages;
+    pipelineInfo.pVertexInputState      = &vertexInputInfo;
+    pipelineInfo.pInputAssemblyState    = &inputAssembly;
+    pipelineInfo.pViewportState         = &viewportState;
+    pipelineInfo.pRasterizationState    = &rasterizer;
+    pipelineInfo.pMultisampleState      = &multisampling;
+    pipelineInfo.pDepthStencilState     = nullptr;
+    pipelineInfo.pColorBlendState       = &colorBlending;
+    pipelineInfo.pDynamicState          = nullptr;
     
+    pipelineInfo.layout                 = this->pipelineLayout;
+    pipelineInfo.renderPass             = this->renderPass;
+    
+    pipelineInfo.subpass                = 0;    // Index of the subpass where this pipeline will be used.
+    
+    pipelineInfo.basePipelineHandle     = VK_NULL_HANDLE;   // Optional
+    pipelineInfo.basePipelineIndex      = -1;               // Optional
 
+    if( vkCreateGraphicsPipelines(this->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &this->graphicsPipeline) != VK_SUCCESS)
+        throw std::runtime_error("Failed to create Graphics Pipeline! :( \n");
 
     /* Tidy up unused objects */
     vkDestroyShaderModule(this->device, fragShaderModule, nullptr);
@@ -677,6 +696,7 @@ void TutorialApp::mainLoop()
 
 void TutorialApp::cleanup()
 {
+    vkDestroyPipeline(this->device, this->graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(this->device, this->pipelineLayout, nullptr);
     vkDestroyRenderPass(this->device, this->renderPass, nullptr);
 
