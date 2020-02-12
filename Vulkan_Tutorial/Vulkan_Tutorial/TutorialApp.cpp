@@ -36,6 +36,7 @@ void TutorialApp::initVulkan()
     this->createGraphicsPipeline();
     this->createFramebuffers();
     this->createCommandPool();
+    this->createCommandBuffers();
 }
 
 void TutorialApp::createInstance()
@@ -520,6 +521,60 @@ void TutorialApp::createCommandPool()
 
     if( vkCreateCommandPool(this->device, &poolInfo, nullptr, &this->commandPool) != VK_SUCCESS )
         throw std::runtime_error("Failed to create command pool :( \n");
+}
+
+void TutorialApp::createCommandBuffers()
+{
+    // Allocate and record commands for each swap chain image.
+    commandBuffers.resize(swapChainFramebuffers.size());
+
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool           = this->commandPool;
+    allocInfo.level                 = VK_COMMAND_BUFFER_LEVEL_PRIMARY;  //Can be submitted to a queue for execution, but cannot be called from other command buffers.
+    allocInfo.commandBufferCount    = static_cast<uint32_t>(this->commandBuffers.size());
+    
+    if( vkAllocateCommandBuffers(this->device, &allocInfo, this->commandBuffers.data()) != VK_SUCCESS)
+        throw std::runtime_error("Failed to allocate command buffers. :( \n");
+
+    // Starting command buffer recording
+    for( size_t i = 0; i<this->commandBuffers.size(); i++)
+    {
+        VkCommandBufferBeginInfo beginInfo = {};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = 0;                    // Optional
+        beginInfo.pInheritanceInfo  = nullptr;  // Optional
+
+        /* If the command buffer was already recorded once, then a call to vkBeginCommandBuffer will implicitly reset it. */
+        if( vkBeginCommandBuffer( this->commandBuffers[i], &beginInfo) != VK_SUCCESS)
+            throw std::runtime_error("Failed to begin recording command buffer. :( \n");
+
+        VkRenderPassBeginInfo renderPassInfo = {};
+        renderPassInfo.sType    = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass   = this->renderPass;
+        renderPassInfo.framebuffer  = this->swapChainFramebuffers[i];
+        
+        /* Define size of render area */
+        renderPassInfo.renderArea.offset    = {0,0};
+        renderPassInfo.renderArea.extent    = this->swapChainExtent;
+        
+        /* Clear color */
+        VkClearValue clearColor = {0.0f, 0.0f, 0.0f, 1.f};
+        renderPassInfo.clearValueCount  = 1;
+        renderPassInfo.pClearValues     = &clearColor;
+        
+        /* RECORDING */
+        vkCmdBeginRenderPass(this->commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        
+        vkCmdBindPipeline(this->commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphicsPipeline);
+
+        vkCmdDraw(this->commandBuffers[i], 3, 1, 0, 0);
+
+        vkCmdEndRenderPass(this->commandBuffers[i]);
+
+        if( vkEndCommandBuffer( this->commandBuffers[i]) != VK_SUCCESS )
+            throw std::runtime_error("Failed to record command buffer! :( \n");
+    }
 }
 
 void TutorialApp::createSurface()

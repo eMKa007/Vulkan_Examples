@@ -72,8 +72,11 @@ private:
     /* Framebuffers */
     std::vector<VkFramebuffer> swapChainFramebuffers;
 
-    /* Command Pool - to record commands */
+    /* Command Pool- to store commands */
     VkCommandPool commandPool;
+
+    /* Command Buffers- to record commands */
+    std::vector<VkCommandBuffer> commandBuffers;
 
     std::vector<const char*> validationLayers;
     std::vector<const char*> deviceExtensions;
@@ -96,6 +99,7 @@ private:
     void createGraphicsPipeline();
     void createFramebuffers();
     void createCommandPool();
+    void createCommandBuffers();
 
     /* Initialize GLFW */
     void initGLFW();
