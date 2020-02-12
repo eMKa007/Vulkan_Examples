@@ -69,6 +69,9 @@ private:
     /* Main Graphics Pipeline */
     VkPipeline graphicsPipeline;
 
+    /* Framebuffers */
+    std::vector<VkFramebuffer> swapChainFramebuffers;
+
     std::vector<const char*> validationLayers;
     std::vector<const char*> deviceExtensions;
 #ifdef NDEBUG
@@ -88,6 +91,7 @@ private:
     void createImageViews();
     void createRenderPass();
     void createGraphicsPipeline();
+    void createFramebuffers();
 
     /* Initialize GLFW */
     void initGLFW();
