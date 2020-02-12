@@ -35,6 +35,7 @@ void TutorialApp::initVulkan()
     this->createRenderPass();
     this->createGraphicsPipeline();
     this->createFramebuffers();
+    this->createCommandPool();
 }
 
 void TutorialApp::createInstance()
@@ -508,6 +509,19 @@ void TutorialApp::createFramebuffers()
     }
 }
 
+void TutorialApp::createCommandPool()
+{
+    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(this->physicalDevice);
+
+    VkCommandPoolCreateInfo poolInfo = {};
+    poolInfo.sType  = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.queueFamilyIndex   = queueFamilyIndices.graphicsFamily.value();    // Commands for drawing- graphics queue
+    poolInfo.flags  = 0;
+
+    if( vkCreateCommandPool(this->device, &poolInfo, nullptr, &this->commandPool) != VK_SUCCESS )
+        throw std::runtime_error("Failed to create command pool :( \n");
+}
+
 void TutorialApp::createSurface()
 {
     if( glfwCreateWindowSurface(this->instance, this->window, nullptr, &this->surface) != VK_SUCCESS)
@@ -639,11 +653,11 @@ VkShaderModule TutorialApp::createShaderModule(const std::vector<char>& code)
 void TutorialApp::initGLFW()
 {
     /* Init GLFW */
-	if( glfwInit() == GLFW_FALSE )
-	{
-		std::cout << "ERROR::GLFW_INIT_FAILED  \n";
-		glfwTerminate();
-	}
+    if( glfwInit() == GLFW_FALSE )
+    {
+        std::cout << "ERROR::GLFW_INIT_FAILED  \n";
+        glfwTerminate();
+    }
 }
 
 void TutorialApp::initWindow()
@@ -656,11 +670,11 @@ void TutorialApp::initWindow()
         nullptr, 
         nullptr);
 
-	if( this->window == nullptr)
-	{
-		std::cout << "ERROR::GLFW_WINDOW_INIT_FAILED  \n";
-		glfwTerminate();
-	}
+    if( this->window == nullptr)
+    {
+        std::cout << "ERROR::GLFW_WINDOW_INIT_FAILED  \n";
+        glfwTerminate();
+    }
 
     
 }
@@ -719,6 +733,8 @@ void TutorialApp::mainLoop()
 
 void TutorialApp::cleanup()
 {
+    vkDestroyCommandPool(this->device, this->commandPool, nullptr);
+
     for( auto framebuffer : this->swapChainFramebuffers)
         vkDestroyFramebuffer(this->device, framebuffer, nullptr);
 

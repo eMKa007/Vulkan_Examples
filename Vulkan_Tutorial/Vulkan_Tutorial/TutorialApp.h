@@ -15,7 +15,8 @@ struct QueueFamilyIndices
     }
 };
 
-struct SwapChainSupportDetails {
+struct SwapChainSupportDetails 
+{
     VkSurfaceCapabilitiesKHR capabilities;
     std::vector<VkSurfaceFormatKHR> formats;
     std::vector<VkPresentModeKHR> presentModes;
@@ -32,7 +33,6 @@ public:
     unsigned int windowHeight;
     std::string windowName;
     GLFWwindow* window;
-    
 
     void run();
 
@@ -72,6 +72,9 @@ private:
     /* Framebuffers */
     std::vector<VkFramebuffer> swapChainFramebuffers;
 
+    /* Command Pool - to record commands */
+    VkCommandPool commandPool;
+
     std::vector<const char*> validationLayers;
     std::vector<const char*> deviceExtensions;
 #ifdef NDEBUG
@@ -92,6 +95,7 @@ private:
     void createRenderPass();
     void createGraphicsPipeline();
     void createFramebuffers();
+    void createCommandPool();
 
     /* Initialize GLFW */
     void initGLFW();
