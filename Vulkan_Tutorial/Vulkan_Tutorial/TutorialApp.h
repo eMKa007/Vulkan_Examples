@@ -78,6 +78,14 @@ private:
     /* Command Buffers- to record commands */
     std::vector<VkCommandBuffer> commandBuffers;
 
+    /* Semaphore- signals that an image has been acquired and is ready for rendering. */
+    VkSemaphore imageAvailableSemaphore;
+    
+    /* Semaphore- signals that rendering has finished and presentation can happen. */
+    VkSemaphore renderFinishedSemaphore;
+
+    
+
     std::vector<const char*> validationLayers;
     std::vector<const char*> deviceExtensions;
 #ifdef NDEBUG
@@ -100,6 +108,7 @@ private:
     void createFramebuffers();
     void createCommandPool();
     void createCommandBuffers();
+    void createSemaphores();
 
     /* Initialize GLFW */
     void initGLFW();
@@ -115,6 +124,9 @@ private:
     VkPresentModeKHR chooseSwapPresentMode( const std::vector<VkPresentModeKHR>& availablePresentModes );
     VkExtent2D chooseSwapExtent( const VkSurfaceCapabilitiesKHR& capabilities );
     VkShaderModule createShaderModule( const std::vector<char>& code );
+
+    /* Drawing */
+    void drawFrame();
 
     void mainLoop();
     void cleanup();

@@ -37,6 +37,7 @@ void TutorialApp::initVulkan()
     this->createFramebuffers();
     this->createCommandPool();
     this->createCommandBuffers();
+    this->createSemaphores();
 }
 
 void TutorialApp::createInstance()
@@ -577,6 +578,18 @@ void TutorialApp::createCommandBuffers()
     }
 }
 
+void TutorialApp::createSemaphores()
+{
+    VkSemaphoreCreateInfo semaphoreInfo = {};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    if( vkCreateSemaphore(this->device, &semaphoreInfo, nullptr, &this->imageAvailableSemaphore) != VK_SUCCESS ||
+        vkCreateSemaphore(this->device, &semaphoreInfo, nullptr, &this->renderFinishedSemaphore) != VK_SUCCESS )
+    {
+        throw std::runtime_error("Failed to create semaphores :( \n");
+    }
+}
+
 void TutorialApp::createSurface()
 {
     if( glfwCreateWindowSurface(this->instance, this->window, nullptr, &this->surface) != VK_SUCCESS)
@@ -778,16 +791,32 @@ bool TutorialApp::isDeviceSuitable(VkPhysicalDevice device)
     return indices.isComplete() && extensionSupported && swapChainAdequate;
 }
 
+void TutorialApp::drawFrame()
+{
+    /*
+    *  Perform operations:
+    *   Acquire an image from the swap chain.
+    *   Execute the command buffer with that image as attachment in the framebuffer.
+    *   Return the image to the swap chain for presentation.
+    */
+    
+    
+}
+
 void TutorialApp::mainLoop()
 {
     while(!glfwWindowShouldClose(window)) 
     {
         glfwPollEvents();
+        drawFrame();
     }
 }
 
 void TutorialApp::cleanup()
 {
+    vkDestroySemaphore(this->device, imageAvailableSemaphore, nullptr);
+    vkDestroySemaphore(this->device, renderFinishedSemaphore, nullptr);
+
     vkDestroyCommandPool(this->device, this->commandPool, nullptr);
 
     for( auto framebuffer : this->swapChainFramebuffers)
