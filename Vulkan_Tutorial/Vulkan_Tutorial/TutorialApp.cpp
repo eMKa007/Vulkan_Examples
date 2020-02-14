@@ -800,7 +800,37 @@ void TutorialApp::drawFrame()
     *   Return the image to the swap chain for presentation.
     */
     
+    uint32_t imageIndex;
+    vkAcquireNextImageKHR(
+        this->device,                   // Logical Device
+        this->swapChain,                // Swap chain from which acquire image.
+        UINT64_MAX,                     // Timeout in nanoseconds
+        this->imageAvailableSemaphore,  // Semaphore to be signalized after using the image
+        VK_NULL_HANDLE,                 // Fence - null
+        &imageIndex                     // Image index - refers to the VkImage in swapChainImages array.
+    );
     
+    /* Submit the command buffer */
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    
+    VkSemaphore waitSemaphores[] = { this->imageAvailableSemaphore };
+    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    submitInfo.waitSemaphoreCount   = 1;
+    submitInfo.pWaitSemaphores      = waitSemaphores;
+    submitInfo.pWaitDstStageMask    = waitStages;
+
+    /* Which command buffer to actually submit for execution */
+    submitInfo.commandBufferCount   = 1;
+    submitInfo.pCommandBuffers      = &this->commandBuffers[imageIndex];
+
+    /* Which semaphore to signal once the command buffer finished execution */
+    VkSemaphore signalSemaphores[]  = { this->renderFinishedSemaphore };
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores    = signalSemaphores;
+
+    if( vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS )
+        throw std::runtime_error("Failed to submit draw command buffer! :(\n");
 }
 
 void TutorialApp::mainLoop()
