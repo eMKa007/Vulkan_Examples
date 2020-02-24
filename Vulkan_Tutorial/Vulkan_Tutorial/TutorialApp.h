@@ -37,6 +37,8 @@ public:
     void run();
 
 private:
+    const int MAX_FRAMES_IN_FLIGHT = 2;
+    
     /* Instance */
     VkInstance instance;
 
@@ -79,12 +81,17 @@ private:
     std::vector<VkCommandBuffer> commandBuffers;
 
     /* Semaphore- signals that an image has been acquired and is ready for rendering. */
-    VkSemaphore imageAvailableSemaphore;
+    std::vector<VkSemaphore> imageAvailableSemaphores;
     
     /* Semaphore- signals that rendering has finished and presentation can happen. */
-    VkSemaphore renderFinishedSemaphore;
+    std::vector<VkSemaphore> renderFinishedSemaphores;
 
-    
+    /* Current used frame */
+    size_t currentFrame = 0;
+
+    /* CPU-GPU synchronization fences */
+    std::vector<VkFence> inFlightFences;
+    std::vector<VkFence> imagesInFlight;
 
     std::vector<const char*> validationLayers;
     std::vector<const char*> deviceExtensions;
@@ -108,7 +115,7 @@ private:
     void createFramebuffers();
     void createCommandPool();
     void createCommandBuffers();
-    void createSemaphores();
+    void createSyncObjects();
 
     /* Initialize GLFW */
     void initGLFW();

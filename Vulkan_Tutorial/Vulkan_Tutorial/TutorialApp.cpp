@@ -37,7 +37,7 @@ void TutorialApp::initVulkan()
     this->createFramebuffers();
     this->createCommandPool();
     this->createCommandBuffers();
-    this->createSemaphores();
+    this->createSyncObjects();
 }
 
 void TutorialApp::createInstance()
@@ -309,7 +309,7 @@ void TutorialApp::createRenderPass()
     VkSubpassDependency dependency = {};
     dependency.srcSubpass   = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass   = 0;                    // Refers to our subpass, which is one and only one subpass here.
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     dependency.dstStageMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
     VkRenderPassCreateInfo renderPassInfo = {};
@@ -587,15 +587,29 @@ void TutorialApp::createCommandBuffers()
     }
 }
 
-void TutorialApp::createSemaphores()
+void TutorialApp::createSyncObjects()
 {
+    this->imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    this->renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    this->inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+    this->imagesInFlight.resize(swapChainImages.size(), VK_NULL_HANDLE);
+
     VkSemaphoreCreateInfo semaphoreInfo = {};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-    if( vkCreateSemaphore(this->device, &semaphoreInfo, nullptr, &this->imageAvailableSemaphore) != VK_SUCCESS ||
-        vkCreateSemaphore(this->device, &semaphoreInfo, nullptr, &this->renderFinishedSemaphore) != VK_SUCCESS )
+    VkFenceCreateInfo fenceInfo = {};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    // Create fence as signaled. Initial frame should not now wait for previous frame- means for ever.
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    
+    for(size_t i = 0; i<MAX_FRAMES_IN_FLIGHT; i++)
     {
-        throw std::runtime_error("Failed to create semaphores :( \n");
+        if( vkCreateSemaphore(this->device, &semaphoreInfo, nullptr, &this->imageAvailableSemaphores[i]) != VK_SUCCESS ||
+            vkCreateSemaphore(this->device, &semaphoreInfo, nullptr, &this->renderFinishedSemaphores[i]) != VK_SUCCESS || 
+            vkCreateFence(this->device, &fenceInfo, nullptr, &this->inFlightFences[i]) != VK_SUCCESS )
+        {
+            throw std::runtime_error("Failed to create semaphores :( \n");
+        }
     }
 }
 
@@ -802,6 +816,9 @@ bool TutorialApp::isDeviceSuitable(VkPhysicalDevice device)
 
 void TutorialApp::drawFrame()
 {
+    // Wait for previous frame to be finished. 
+    vkWaitForFences(this->device, 1, &this->inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+
     /*
     *  Perform operations:
     *   Acquire an image from the swap chain.
@@ -814,16 +831,23 @@ void TutorialApp::drawFrame()
         this->device,                   // Logical Device
         this->swapChain,                // Swap chain from which acquire image.
         UINT64_MAX,                     // Timeout in nanoseconds
-        this->imageAvailableSemaphore,  // Semaphore to be signalized after using the image
+        this->imageAvailableSemaphores[this->currentFrame],  // Semaphore to be signalized after using the image
         VK_NULL_HANDLE,                 // Fence - null
         &imageIndex                     // Image index - refers to the VkImage in swapChainImages array.
     );
+
+    // Check if previous frame is using this image (there is its fence to wait on).
+    if( this->imagesInFlight[imageIndex] != VK_NULL_HANDLE)
+        vkWaitForFences(this->device, 1, &this->imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+
+    // Mark the image as now being in use by current frame
+    this->imagesInFlight[imageIndex] = this->inFlightFences[currentFrame];
     
     /* Submit the command buffer */
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     
-    VkSemaphore waitSemaphores[] = { this->imageAvailableSemaphore };
+    VkSemaphore waitSemaphores[] = { this->imageAvailableSemaphores[currentFrame] };
     VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     submitInfo.waitSemaphoreCount   = 1;
     submitInfo.pWaitSemaphores      = waitSemaphores;
@@ -834,11 +858,14 @@ void TutorialApp::drawFrame()
     submitInfo.pCommandBuffers      = &this->commandBuffers[imageIndex];
 
     /* Which semaphore to signal once the command buffer finished execution */
-    VkSemaphore signalSemaphores[]  = { this->renderFinishedSemaphore };
+    VkSemaphore signalSemaphores[]  = { this->renderFinishedSemaphores[currentFrame] };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores    = signalSemaphores;
 
-    if( vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS )
+    //Reset fence to be 'unsignaled'.
+    vkResetFences(this->device, 1, &this->inFlightFences[currentFrame]);
+
+    if( vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, this->inFlightFences[this->currentFrame]) != VK_SUCCESS )
         throw std::runtime_error("Failed to submit draw command buffer! :(\n");
 
     /* Presentation - submit the result back to the swap chain */
@@ -857,6 +884,11 @@ void TutorialApp::drawFrame()
     presentInfo.pResults = nullptr; //Optional.
 
     vkQueuePresentKHR(presentQueue, &presentInfo);
+
+    vkQueueWaitIdle(presentQueue);
+
+    // Proceed to next frame counter
+    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 void TutorialApp::mainLoop()
@@ -866,12 +898,18 @@ void TutorialApp::mainLoop()
         glfwPollEvents();
         drawFrame();
     }
+
+    vkDeviceWaitIdle(device);
 }
 
 void TutorialApp::cleanup()
 {
-    vkDestroySemaphore(this->device, imageAvailableSemaphore, nullptr);
-    vkDestroySemaphore(this->device, renderFinishedSemaphore, nullptr);
+    for(size_t i = 0; i<MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        vkDestroySemaphore(this->device, this->imageAvailableSemaphores[i], nullptr);
+        vkDestroySemaphore(this->device, this->renderFinishedSemaphores[i], nullptr);
+        vkDestroyFence(this->device, this->inFlightFences[i], nullptr);
+    }
 
     vkDestroyCommandPool(this->device, this->commandPool, nullptr);
 
