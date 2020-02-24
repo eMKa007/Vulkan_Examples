@@ -91,6 +91,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\Linking\Vulkan\Include;$(ProjectDir)..\..\Linking\GLM\include;$(ProjectDir)..\..\Linking\GLEW\include;$(ProjectDir)..\..\Linking\GLFW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

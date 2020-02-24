@@ -37,7 +37,7 @@ public:
     void run();
 
 private:
-    const int MAX_FRAMES_IN_FLIGHT = 2;
+    const size_t MAX_FRAMES_IN_FLIGHT = 2;
     
     /* Instance */
     VkInstance instance;
