@@ -300,10 +300,17 @@ void TutorialApp::createRenderPass()
     colorAttachmentRef.attachment   = 0;
     colorAttachmentRef.layout       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-    VkSubpassDescription subpass = {};
+    VkSubpassDescription subpass    = {};
     subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount    = 1;
     subpass.pColorAttachments       = &colorAttachmentRef;
+
+    /* Subpass dependencies */
+    VkSubpassDependency dependency = {};
+    dependency.srcSubpass   = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass   = 0;                    // Refers to our subpass, which is one and only one subpass here.
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstStageMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
     VkRenderPassCreateInfo renderPassInfo = {};
     renderPassInfo.sType        = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -311,6 +318,8 @@ void TutorialApp::createRenderPass()
     renderPassInfo.pAttachments     = &colorAttachment;
     renderPassInfo.subpassCount     = 1;
     renderPassInfo.pSubpasses       = &subpass;
+    renderPassInfo.dependencyCount  = 1;
+    renderPassInfo.pDependencies    = &dependency;
 
     if( vkCreateRenderPass(this->device, &renderPassInfo, nullptr, &this->renderPass) != VK_SUCCESS )
     {
@@ -831,6 +840,23 @@ void TutorialApp::drawFrame()
 
     if( vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS )
         throw std::runtime_error("Failed to submit draw command buffer! :(\n");
+
+    /* Presentation - submit the result back to the swap chain */
+    VkPresentInfoKHR presentInfo = {};
+    presentInfo.sType   = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    
+    presentInfo.waitSemaphoreCount  = 1;
+    presentInfo.pWaitSemaphores     = signalSemaphores; // Which semaphores to wait on before presentation.
+
+    VkSwapchainKHR  swapChains[]    = {swapChain};
+    presentInfo.swapchainCount      = 1;
+    presentInfo.pSwapchains         = swapChains;   // Which swapchains to present image. 
+    presentInfo.pImageIndices       = &imageIndex;
+
+    // Can specify array of VkResult values to check for every individual swap chain if presentaion was succesfull.
+    presentInfo.pResults = nullptr; //Optional.
+
+    vkQueuePresentKHR(presentQueue, &presentInfo);
 }
 
 void TutorialApp::mainLoop()
