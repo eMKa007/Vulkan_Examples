@@ -126,11 +126,12 @@ private:
     bool isDeviceSuitable( VkPhysicalDevice device );
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
-    
     VkSurfaceFormatKHR chooseSwapSurfaceFormat( const std::vector<VkSurfaceFormatKHR>& availableFormats );
     VkPresentModeKHR chooseSwapPresentMode( const std::vector<VkPresentModeKHR>& availablePresentModes );
     VkExtent2D chooseSwapExtent( const VkSurfaceCapabilitiesKHR& capabilities );
     VkShaderModule createShaderModule( const std::vector<char>& code );
+    void recreateSwapChain();
+    void cleanupSwapChain();
 
     /* Drawing */
     void drawFrame();

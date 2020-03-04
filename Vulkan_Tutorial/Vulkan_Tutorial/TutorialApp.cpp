@@ -712,7 +712,14 @@ VkExtent2D TutorialApp::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabil
         return capabilities.currentExtent;
     else
     {
-        VkExtent2D actualExtent = {this->windowWidth, this->windowHeight};
+        int width;
+        int height;
+        glfwGetFramebufferSize(this->window, &width, &height);
+
+        VkExtent2D actualExtent = {
+            static_cast<uint32_t>(width), 
+            static_cast<uint32_t>(height)
+        };
 
         /* 
          * Clamp values of 'this->windowWidth' and 'this->windowHeight' between 
@@ -720,6 +727,7 @@ VkExtent2D TutorialApp::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabil
          */
         actualExtent.width = std::max( capabilities.minImageExtent.width, 
             std::min(capabilities.maxImageExtent.width, actualExtent.width));
+
         actualExtent.height = std::max( capabilities.minImageExtent.height, 
             std::min( capabilities.maxImageExtent.height, actualExtent.height));
 
@@ -741,6 +749,37 @@ VkShaderModule TutorialApp::createShaderModule(const std::vector<char>& code)
     return shaderModule;
 }
 
+void TutorialApp::recreateSwapChain()
+{
+    vkDeviceWaitIdle(this->device);
+
+    this->cleanupSwapChain();
+
+    this->createSwapChain();
+    this->createImageViews();
+    this->createRenderPass();
+    this->createGraphicsPipeline();
+    this->createFramebuffers();
+    this->createCommandBuffers();
+}
+
+void TutorialApp::cleanupSwapChain()
+{
+    for( size_t i = 0; i < swapChainFramebuffers.size(); i++ )
+        vkDestroyFramebuffer(this->device, this->swapChainFramebuffers[i], nullptr);
+
+    vkFreeCommandBuffers(this->device, this->commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
+
+    vkDestroyPipeline(this->device, this->graphicsPipeline, nullptr);
+    vkDestroyPipelineLayout(this->device, this->pipelineLayout, nullptr);
+    vkDestroyRenderPass(this->device, this->renderPass, nullptr);
+
+    for( size_t i = 0; i < swapChainImageViews.size(); i++ )
+        vkDestroyImageView(this->device, this->swapChainImageViews[i], nullptr);
+
+    vkDestroySwapchainKHR(this->device, this->swapChain, nullptr);
+}
+
 void TutorialApp::initGLFW()
 {
     /* Init GLFW */
@@ -754,7 +793,7 @@ void TutorialApp::initGLFW()
 void TutorialApp::initWindow()
 {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+    glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
     this->window = glfwCreateWindow(static_cast<int>(this->windowWidth), 
         static_cast<int>(this->windowHeight), 
         this->windowName.c_str(), 
@@ -827,7 +866,7 @@ void TutorialApp::drawFrame()
     */
     
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(
+    VkResult acquireResult = vkAcquireNextImageKHR(
         this->device,                   // Logical Device
         this->swapChain,                // Swap chain from which acquire image.
         UINT64_MAX,                     // Timeout in nanoseconds
@@ -835,6 +874,16 @@ void TutorialApp::drawFrame()
         VK_NULL_HANDLE,                 // Fence - null
         &imageIndex                     // Image index - refers to the VkImage in swapChainImages array.
     );
+
+    if( acquireResult == VK_ERROR_OUT_OF_DATE_KHR )
+    {
+        this->recreateSwapChain();
+        return;
+    }
+    else if ( acquireResult != VK_SUCCESS && acquireResult != VK_SUBOPTIMAL_KHR )
+    {
+        throw std::runtime_error("Failed to acquire swap chain image. :(\n");
+    }
 
     // Check if previous frame is using this image (there is its fence to wait on).
     if( this->imagesInFlight[imageIndex] != VK_NULL_HANDLE)
@@ -883,7 +932,16 @@ void TutorialApp::drawFrame()
     // Can specify array of VkResult values to check for every individual swap chain if presentaion was succesfull.
     presentInfo.pResults = nullptr; //Optional.
 
-    vkQueuePresentKHR(presentQueue, &presentInfo);
+    VkResult presentResult = vkQueuePresentKHR(presentQueue, &presentInfo);
+
+    if( presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR )
+    {
+        this->recreateSwapChain();
+    }
+    else if( presentResult != VK_SUCCESS )
+    {
+        throw std::runtime_error("Failed to present swap chain image! :(\n");
+    }
 
     vkQueueWaitIdle(presentQueue);
 
@@ -904,6 +962,8 @@ void TutorialApp::mainLoop()
 
 void TutorialApp::cleanup()
 {
+    this->cleanupSwapChain();
+
     for(size_t i = 0; i<MAX_FRAMES_IN_FLIGHT; i++)
     {
         vkDestroySemaphore(this->device, this->imageAvailableSemaphores[i], nullptr);
@@ -913,17 +973,6 @@ void TutorialApp::cleanup()
 
     vkDestroyCommandPool(this->device, this->commandPool, nullptr);
 
-    for( auto framebuffer : this->swapChainFramebuffers)
-        vkDestroyFramebuffer(this->device, framebuffer, nullptr);
-
-    vkDestroyPipeline(this->device, this->graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(this->device, this->pipelineLayout, nullptr);
-    vkDestroyRenderPass(this->device, this->renderPass, nullptr);
-
-    for (auto imageView : this->swapChainImageViews)
-        vkDestroyImageView(this->device, imageView, nullptr);
-
-    vkDestroySwapchainKHR(device, swapChain, nullptr);
     vkDestroyDevice(this->device, nullptr);
 
     vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
