@@ -34,6 +34,9 @@ public:
     std::string windowName;
     GLFWwindow* window;
 
+    /* Handling Window Resize Explicity */
+    bool framebufferResized = false;
+
     void run();
 
 private:
@@ -95,6 +98,7 @@ private:
 
     std::vector<const char*> validationLayers;
     std::vector<const char*> deviceExtensions;
+
 #ifdef NDEBUG
     const bool enableValidationLayers = true;
 #else

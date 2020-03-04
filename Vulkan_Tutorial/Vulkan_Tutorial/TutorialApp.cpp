@@ -1,7 +1,16 @@
 
 #include "TutorialApp.h"
 
+/*
+* Callbacks Functionality.
+*/
+static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
+{
+    auto app = reinterpret_cast<TutorialApp*>(glfwGetWindowUserPointer(window));
+    app->framebufferResized = true;
+}
 
+// ------------------------------------
 
 TutorialApp::TutorialApp( unsigned int windowWidth, unsigned int windowHeight, std::string windowName)
     : windowWidth(windowWidth), windowHeight(windowHeight), windowName(windowName)
@@ -805,8 +814,12 @@ void TutorialApp::initWindow()
         std::cout << "ERROR::GLFW_WINDOW_INIT_FAILED  \n";
         glfwTerminate();
     }
-
     
+    /*
+    * Set pointer to GLFWwindow inside callbacks functions.
+    */
+    glfwSetWindowUserPointer(this->window, this);
+    glfwSetFramebufferSizeCallback(this->window, framebufferResizeCallback);
 }
 
 bool TutorialApp::checkValidationLayerSupport()
@@ -866,7 +879,7 @@ void TutorialApp::drawFrame()
     */
     
     uint32_t imageIndex;
-    VkResult acquireResult = vkAcquireNextImageKHR(
+    VkResult result = vkAcquireNextImageKHR(
         this->device,                   // Logical Device
         this->swapChain,                // Swap chain from which acquire image.
         UINT64_MAX,                     // Timeout in nanoseconds
@@ -875,12 +888,12 @@ void TutorialApp::drawFrame()
         &imageIndex                     // Image index - refers to the VkImage in swapChainImages array.
     );
 
-    if( acquireResult == VK_ERROR_OUT_OF_DATE_KHR )
+    if( result == VK_ERROR_OUT_OF_DATE_KHR )
     {
         this->recreateSwapChain();
         return;
     }
-    else if ( acquireResult != VK_SUCCESS && acquireResult != VK_SUBOPTIMAL_KHR )
+    else if ( result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR )
     {
         throw std::runtime_error("Failed to acquire swap chain image. :(\n");
     }
@@ -934,11 +947,12 @@ void TutorialApp::drawFrame()
 
     VkResult presentResult = vkQueuePresentKHR(presentQueue, &presentInfo);
 
-    if( presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR )
+    if( result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized )
     {
+        framebufferResized = false;
         this->recreateSwapChain();
     }
-    else if( presentResult != VK_SUCCESS )
+    else if( result != VK_SUCCESS )
     {
         throw std::runtime_error("Failed to present swap chain image! :(\n");
     }
