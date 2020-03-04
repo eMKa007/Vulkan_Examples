@@ -760,6 +760,19 @@ VkShaderModule TutorialApp::createShaderModule(const std::vector<char>& code)
 
 void TutorialApp::recreateSwapChain()
 {
+    /* Handling Window minimization - size of framebuffer is 0 */
+    int width;
+    int height;
+    
+    glfwGetFramebufferSize(this->window, &width, &height);
+
+    /* Wait till window is returned to foreground. */
+    while( width == 0 || height == 0 )
+    {
+        glfwGetFramebufferSize(this->window, &width, &height);
+        glfwWaitEvents();
+    }
+
     vkDeviceWaitIdle(this->device);
 
     this->cleanupSwapChain();
