@@ -16,7 +16,9 @@
 #include <fstream>
 #include <vector>
 #include <set>
+#include <array>
 
+#include <glm.hpp>
 
 #include "TutorialApp.h"
 

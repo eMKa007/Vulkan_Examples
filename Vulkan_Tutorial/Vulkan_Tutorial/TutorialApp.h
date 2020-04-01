@@ -22,6 +22,51 @@ struct SwapChainSupportDetails
     std::vector<VkPresentModeKHR> presentModes;
 };
 
+struct Vertex {
+    glm::vec2 pos;
+    glm::vec3 color;
+
+    static VkVertexInputBindingDescription getBindingDescription() 
+    {
+        /* Structure describing data rate */
+        VkVertexInputBindingDescription bindingDescription = {};
+        bindingDescription.binding      = 0;                            /* Specifies the index of binding in the array of bindings. */
+        bindingDescription.stride       = sizeof(Vertex);               /* Number of bytes from one entry to next one. */
+        bindingDescription.inputRate    = VK_VERTEX_INPUT_RATE_VERTEX;  /* RATE_VERTEX means: move to nex data entry after each vertex. */
+
+        return bindingDescription;
+    }
+    
+    /* An attribute description struct describes how to extract a vertex attribute from a chunk of vertex data. 
+    *  Thats why we have here 2 structures- one description for position, one description for color.
+    *  Corresponding formats of data:
+    *       float: VK_FORMAT_R32_SFLOAT
+    *       vec2: VK_FORMAT_R32G32_SFLOAT
+    *       vec3: VK_FORMAT_R32G32B32_SFLOAT
+    *       vec4: VK_FORMAT_R32G32B32A32_SFLOAT
+    *       ivec2: VK_FORMAT_R32G32_SINT
+    *       uvec4: VK_FORMAT_R32G32B32A32_UINT
+    *       double: VK_FORMAT_R64_SFLOAT
+    */
+    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() 
+    {
+        std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions = {};
+
+        /* Description of pos attribute */
+        attributeDescriptions[0].binding    = 0;
+        attributeDescriptions[0].location   = 0;  /* References to location inside Vertex Shader - 0 for position. */
+        attributeDescriptions[0].format     = VK_FORMAT_R32G32_SFLOAT;  /* Format of vertex position data */
+        attributeDescriptions[0].offset     = offsetof(Vertex, pos);
+        
+        /* Description of color attribute */
+        attributeDescriptions[1].binding    = 0;
+        attributeDescriptions[1].location   = 1;
+        attributeDescriptions[1].format     = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[1].offset     = offsetof(Vertex, color);
+
+        return attributeDescriptions;
+    }
+};
 
 class TutorialApp
 {
@@ -165,3 +210,10 @@ static std::vector<char> readFile( const std::string& filename )
 
     return buffer;
 }
+
+/* Vertex Data - {{position}, {color}} */
+const std::vector<Vertex> vertices = {
+    {{0.0f, -0.5f}, {1.f, 0.f, 0.f}},
+    {{0.5f, 0.5f},  {0.f, 1.f, 0.f}},
+    {{-0.5f, 0.5f}, {0.f, 0.f, 1.f}},
+};
