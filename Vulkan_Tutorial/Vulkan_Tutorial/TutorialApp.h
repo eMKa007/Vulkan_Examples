@@ -141,6 +141,10 @@ private:
     std::vector<VkFence> inFlightFences;
     std::vector<VkFence> imagesInFlight;
 
+    /* Vertex Buffer - vertices memory area */
+    VkBuffer vertexBuffer;
+    VkDeviceMemory vertexBufferMemory;
+
     std::vector<const char*> validationLayers;
     std::vector<const char*> deviceExtensions;
 
@@ -163,6 +167,7 @@ private:
     void createGraphicsPipeline();
     void createFramebuffers();
     void createCommandPool();
+    void createVertexBuffer();
     void createCommandBuffers();
     void createSyncObjects();
 
@@ -174,6 +179,7 @@ private:
     bool checkValidationLayerSupport();
     bool isDeviceSuitable( VkPhysicalDevice device );
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
     VkSurfaceFormatKHR chooseSwapSurfaceFormat( const std::vector<VkSurfaceFormatKHR>& availableFormats );
     VkPresentModeKHR chooseSwapPresentMode( const std::vector<VkPresentModeKHR>& availablePresentModes );
@@ -215,5 +221,5 @@ static std::vector<char> readFile( const std::string& filename )
 const std::vector<Vertex> vertices = {
     {{0.0f, -0.5f}, {1.f, 0.f, 0.f}},
     {{0.5f, 0.5f},  {0.f, 1.f, 0.f}},
-    {{-0.5f, 0.5f}, {0.f, 0.f, 1.f}},
+    {{-0.5f, 0.5f}, {0.f, 0.f, 1.f}}
 };

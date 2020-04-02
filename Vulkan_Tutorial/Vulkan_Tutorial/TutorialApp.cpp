@@ -45,6 +45,7 @@ void TutorialApp::initVulkan()
     this->createGraphicsPipeline();
     this->createFramebuffers();
     this->createCommandPool();
+    this->createVertexBuffer();
     this->createCommandBuffers();
     this->createSyncObjects();
 }
@@ -546,6 +547,47 @@ void TutorialApp::createCommandPool()
         throw std::runtime_error("Failed to create command pool :( \n");
 }
 
+void TutorialApp::createVertexBuffer()
+{
+    /* Specify memory desired type and size */
+    VkBufferCreateInfo bufferInfo = {};
+    bufferInfo.sType    = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size     = sizeof(vertices[0]) * vertices.size();    // Size of buffer in bytes
+    bufferInfo.usage    = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    bufferInfo.flags    = 0;    /* No additional parameters */
+    bufferInfo.sharingMode  = VK_SHARING_MODE_EXCLUSIVE;
+
+    if(vkCreateBuffer(this->device, &bufferInfo, nullptr, &this->vertexBuffer) != VK_SUCCESS )
+        throw std::runtime_error("Failed to create vertex buffer. :( \n");
+
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(this->device, this->vertexBuffer, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize    = memRequirements.size;
+    allocInfo.memoryTypeIndex   = this->findMemoryType(memRequirements.memoryTypeBits, 
+                                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
+                                                        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ); // Mapped memory always matches the contents of the allocated memory.
+ 
+    if(vkAllocateMemory(this->device, &allocInfo, nullptr, &this->vertexBufferMemory))
+        throw std::runtime_error("Failed to allocate vertex buffer memory! :( \n");
+
+    /* Bind created memory to vertex buffer object */
+    vkBindBufferMemory(this->device, this->vertexBuffer, this->vertexBufferMemory, 0);
+
+    /* Mappring buffer memory - filling allocated memory with vertex data */
+    void* data; //Pointer to the mapped memory. 
+    if( vkMapMemory(this->device, this->vertexBufferMemory, 0, bufferInfo.size, 0, &data) != VK_SUCCESS )
+        throw std::runtime_error("Failed to map vertex buffer memory! :( \n");
+    
+    /* Copy vertices data to mapped area */
+    memcpy(data, vertices.data(), (size_t)bufferInfo.size);
+
+    /* Unmap a previously mapped memory object as data was copied. */
+    vkUnmapMemory(this->device, this->vertexBufferMemory);
+}
+
 void TutorialApp::createCommandBuffers()
 {
     // Allocate and record commands for each swap chain image.
@@ -591,7 +633,12 @@ void TutorialApp::createCommandBuffers()
         
         vkCmdBindPipeline(this->commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphicsPipeline);
 
-        vkCmdDraw(this->commandBuffers[i], 3, 1, 0, 0);
+        /* Binding vertex buffer */
+        VkBuffer vertexBuffers[] = {this->vertexBuffer};
+        VkDeviceSize offsets[] = {0};
+        vkCmdBindVertexBuffers(this->commandBuffers[i], 0, 1, vertexBuffers, offsets);
+
+        vkCmdDraw(this->commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
         vkCmdEndRenderPass(this->commandBuffers[i]);
 
@@ -665,6 +712,26 @@ QueueFamilyIndices TutorialApp::findQueueFamilies(VkPhysicalDevice device)
     }
 
     return indices;
+}
+
+uint32_t TutorialApp::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+{
+    VkPhysicalDeviceMemoryProperties memProperties;
+    vkGetPhysicalDeviceMemoryProperties(this->physicalDevice, &memProperties);
+    
+    /* 000100010b 
+    *          ^  - check bit field in every step.
+    */
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) 
+    {
+        if((typeFilter & (1 << i)) &&
+          ((memProperties.memoryTypes[i].propertyFlags & properties) == properties))
+        {
+            return i;
+        }
+    }
+
+    throw std::runtime_error("Failed to find suitable memory type. :( \n");
 }
 
 SwapChainSupportDetails TutorialApp::querySwapChainSupport(VkPhysicalDevice device)
@@ -994,6 +1061,10 @@ void TutorialApp::mainLoop()
 void TutorialApp::cleanup()
 {
     this->cleanupSwapChain();
+
+    /* Destroy Vertex Buffer and allocated to it memory */
+    vkDestroyBuffer(this->device, this->vertexBuffer, nullptr);
+    vkFreeMemory(this->device, this->vertexBufferMemory, nullptr);
 
     for(size_t i = 0; i<MAX_FRAMES_IN_FLIGHT; i++)
     {
