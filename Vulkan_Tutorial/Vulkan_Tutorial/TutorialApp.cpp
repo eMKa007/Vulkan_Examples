@@ -679,7 +679,11 @@ void TutorialApp::createCommandBuffers()
         VkDeviceSize offsets[] = {0};
         vkCmdBindVertexBuffers(this->commandBuffers[i], 0, 1, vertexBuffers, offsets);
 
-        vkCmdDraw(this->commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+        /* Binding index buffer */
+        vkCmdBindIndexBuffer(this->commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
+        //vkCmdDraw(this->commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+        vkCmdDrawIndexed(this->commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
         vkCmdEndRenderPass(this->commandBuffers[i]);
 
