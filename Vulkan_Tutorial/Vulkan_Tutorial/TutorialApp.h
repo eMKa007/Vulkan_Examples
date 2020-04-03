@@ -112,6 +112,9 @@ private:
     /* Image Views */
     std::vector<VkImageView> swapChainImageViews;
 
+    /* Descriptors Layout - all of the descriptors are combined into single descriptor set layout. */
+    VkDescriptorSetLayout descriptorSetLayout;
+
     /* Pipeline Layouts */
     VkRenderPass renderPass;
     VkPipelineLayout pipelineLayout;
@@ -166,6 +169,7 @@ private:
     void createSwapChain();
     void createImageViews();
     void createRenderPass();
+    void createDescriptorSetLayout();
     void createGraphicsPipeline();
     void createFramebuffers();
     void createCommandPool();
@@ -233,4 +237,11 @@ const std::vector<Vertex> vertices = {
 
 const std::vector<uint16_t> indices = {
     0, 1, 2, 2, 3, 0 
+};
+
+/* Camera setup - matrices - to be moved in separate class */
+struct UniformBufferObject {
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 proj;
 };

@@ -42,6 +42,7 @@ void TutorialApp::initVulkan()
     this->createSwapChain();
     this->createImageViews();
     this->createRenderPass();
+    this->createDescriptorSetLayout();
     this->createGraphicsPipeline();
     this->createFramebuffers();
     this->createCommandPool();
@@ -338,6 +339,26 @@ void TutorialApp::createRenderPass()
     }
 }
 
+void TutorialApp::createDescriptorSetLayout()
+{
+    /* Binding to UniformBufferObject structure. */
+    VkDescriptorSetLayoutBinding uboLayoutBinding = {};
+    uboLayoutBinding.binding    = 0;
+    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;   /* Descriptor will be referenced in vertex shader stage. */
+    uboLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uboLayoutBinding.descriptorCount    = 1;
+    uboLayoutBinding.pImmutableSamplers = nullptr;
+
+    /* Layout info describing all of the bindings. */
+    VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+    layoutInfo.sType    = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = 1;
+    layoutInfo.pBindings    = &uboLayoutBinding;
+
+    if( vkCreateDescriptorSetLayout(this->device, &layoutInfo, nullptr, &this->descriptorSetLayout) != VK_SUCCESS )
+        throw std::runtime_error("Failed to create Descriptor Set Layout. :( \n");
+}
+
 void TutorialApp::createGraphicsPipeline()
 {
     auto vertShaderCode = readFile("shaders/vert.spv");
@@ -475,8 +496,8 @@ void TutorialApp::createGraphicsPipeline()
     /* Pipeline Layout */
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount         = 0;        // Optional
-    pipelineLayoutInfo.pSetLayouts            = nullptr;  // Optional
+    pipelineLayoutInfo.setLayoutCount         = 1;                          // One layout - Uniform Buffer Object bound to 0 position.
+    pipelineLayoutInfo.pSetLayouts            = &this->descriptorSetLayout; // Pointer to descriptor set layout which bound all of the descriptors.
     pipelineLayoutInfo.pushConstantRangeCount = 0;        // Optional
     pipelineLayoutInfo.pPushConstantRanges    = nullptr;  // Optional
    
@@ -682,9 +703,10 @@ void TutorialApp::createCommandBuffers()
         /* Binding index buffer */
         vkCmdBindIndexBuffer(this->commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
-        //vkCmdDraw(this->commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+        /* Draw command by using indexes of vertices. */
         vkCmdDrawIndexed(this->commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
+        /* END RECORDING */
         vkCmdEndRenderPass(this->commandBuffers[i]);
 
         if( vkEndCommandBuffer( this->commandBuffers[i]) != VK_SUCCESS )
@@ -1176,6 +1198,9 @@ void TutorialApp::mainLoop()
 void TutorialApp::cleanup()
 {
     this->cleanupSwapChain();
+
+    /* Destroy descriptor set layout which is bounding all of the descriptors. */
+    vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
 
     /* Destroy Index Buffer and allocated to it memory */
     vkDestroyBuffer(device, indexBuffer, nullptr);
