@@ -401,14 +401,14 @@ void TutorialApp::createGraphicsPipeline()
     /* Rasterizer */
     VkPipelineRasterizationStateCreateInfo rasterizer = {};
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterizer.depthClampEnable         = VK_FALSE;   // Clamp fragments that are beyond near and far planes. - Usefull to shadow maps.
+    rasterizer.depthClampEnable         = VK_FALSE;   // Clamp fragments that are beyond near and far planes. - Useful to shadow maps.
     rasterizer.rasterizerDiscardEnable  = VK_FALSE;   // If true- geometry is never passes through the rasterizer, this disables any output to the framebuffer.
     rasterizer.polygonMode              = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth                = 1.f;        // Width - number of fragments
     rasterizer.cullMode                 = VK_CULL_MODE_BACK_BIT;
     rasterizer.frontFace                = VK_FRONT_FACE_CLOCKWISE;
 
-    /* Add factor to depth values - usefull in shadow mapping */
+    /* Add factor to depth values - useful in shadow mapping */
     rasterizer.depthBiasEnable          = VK_FALSE;
     rasterizer.depthBiasConstantFactor  = 0.f;        // Optional
     rasterizer.depthBiasClamp           = 0.f;        // Optional
@@ -550,22 +550,41 @@ void TutorialApp::createCommandPool()
 void TutorialApp::createVertexBuffer()
 {
     VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+
+    /* Temporary host buffer to copy data from CPU to GPU */
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
     createBuffer(bufferSize, 
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        stagingBuffer,
+        stagingBufferMemory);
+
+    /* Mapping staging buffer memory and filling it with vertex data. */
+    void* data;
+    if( vkMapMemory(this->device, stagingBufferMemory, 0, bufferSize, 0, &data) != VK_SUCCESS )
+        throw std::runtime_error("Failed to create staging buffer. :( \n");
+    
+    /* Copy vertices data to staging buffer */
+    memcpy(data, vertices.data(), (size_t)bufferSize);
+
+    /* Unmap previously mapped memory object as data was copied */
+    vkUnmapMemory(this->device, stagingBufferMemory);
+
+    /* Create Vertex Buffer on GPU */
+    createBuffer(bufferSize, 
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         this->vertexBuffer,
         this->vertexBufferMemory);
 
-    /* Mappring buffer memory - filling allocated memory with vertex data */
-    void* data; //Pointer to the mapped memory. 
-    if( vkMapMemory(this->device, this->vertexBufferMemory, 0, bufferSize, 0, &data) != VK_SUCCESS )
-        throw std::runtime_error("Failed to map vertex buffer memory! :( \n");
-    
-    /* Copy vertices data to mapped area */
-    memcpy(data, vertices.data(), (size_t)bufferSize);
+    /* Copy data from staging buffer to high performance memory on GPU */
+    copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
 
-    /* Unmap a previously mapped memory object as data was copied. */
-    vkUnmapMemory(this->device, this->vertexBufferMemory);
+    /* Clean up resources */
+    vkDestroyBuffer(this->device, stagingBuffer, nullptr);
+    vkFreeMemory(this->device, stagingBufferMemory, nullptr);
 }
 
 void TutorialApp::createCommandBuffers()
@@ -837,6 +856,48 @@ void TutorialApp::createBuffer(VkDeviceSize deviceSize, VkBufferUsageFlags usage
     vkBindBufferMemory(this->device, buffer, bufferMemory, 0);
 }
 
+void TutorialApp::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
+{
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;  /* Each recording of the command buffer will only be submitted once. */
+    allocInfo.commandPool           = this->commandPool;
+    allocInfo.commandBufferCount    = 1;
+    
+    VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(this->device, &allocInfo, &commandBuffer);
+
+    /* Start recording command buffer for copying operations */
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;  
+
+    /* Begin recording */
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+    /* Provide information about regions to copy from and to. Call CopyBuffer command. */
+    VkBufferCopy copyRegion = {};
+    copyRegion.size         = size;
+    copyRegion.dstOffset    = 0;
+    copyRegion.srcOffset    = 0;
+    vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+    /* End commands recording. */
+    vkEndCommandBuffer(commandBuffer);
+
+    /* Submit recorded command buffer. Contain only one command- copy. */
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType    = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount   = 1;
+    submitInfo.pCommandBuffers      = &commandBuffer;
+
+    vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(this->graphicsQueue);
+
+    /* Free resources */
+    vkFreeCommandBuffers(this->device, this->commandPool, 1, &commandBuffer);
+}
+
 void TutorialApp::recreateSwapChain()
 {
     /* Handling Window minimization - size of framebuffer is 0 */
@@ -1034,7 +1095,7 @@ void TutorialApp::drawFrame()
     presentInfo.pSwapchains         = swapChains;   // Which swapchains to present image. 
     presentInfo.pImageIndices       = &imageIndex;
 
-    // Can specify array of VkResult values to check for every individual swap chain if presentaion was succesfull.
+    // Can specify array of VkResult values to check for every individual swap chain if presentation was successful.
     presentInfo.pResults = nullptr; //Optional.
 
     VkResult presentResult = vkQueuePresentKHR(presentQueue, &presentInfo);

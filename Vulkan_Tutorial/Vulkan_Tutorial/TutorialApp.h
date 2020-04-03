@@ -32,7 +32,7 @@ struct Vertex {
         VkVertexInputBindingDescription bindingDescription = {};
         bindingDescription.binding      = 0;                            /* Specifies the index of binding in the array of bindings. */
         bindingDescription.stride       = sizeof(Vertex);               /* Number of bytes from one entry to next one. */
-        bindingDescription.inputRate    = VK_VERTEX_INPUT_RATE_VERTEX;  /* RATE_VERTEX means: move to nex data entry after each vertex. */
+        bindingDescription.inputRate    = VK_VERTEX_INPUT_RATE_VERTEX;  /* RATE_VERTEX means: move to next data entry after each vertex. */
 
         return bindingDescription;
     }
@@ -186,6 +186,7 @@ private:
     VkExtent2D chooseSwapExtent( const VkSurfaceCapabilitiesKHR& capabilities );
     VkShaderModule createShaderModule( const std::vector<char>& code );
     void createBuffer(VkDeviceSize deviceSize, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
     void recreateSwapChain();
     void cleanupSwapChain();
