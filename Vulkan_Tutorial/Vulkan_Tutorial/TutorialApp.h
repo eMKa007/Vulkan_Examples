@@ -144,6 +144,8 @@ private:
     /* Vertex Buffer - vertices memory area */
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
+    VkBuffer indexBuffer;               /* Index data for corresponding vertex buffer. */
+    VkDeviceMemory indexBufferMemory;
 
     std::vector<const char*> validationLayers;
     std::vector<const char*> deviceExtensions;
@@ -168,6 +170,7 @@ private:
     void createFramebuffers();
     void createCommandPool();
     void createVertexBuffer();
+    void createIndexBuffer();
     void createCommandBuffers();
     void createSyncObjects();
 
@@ -224,5 +227,10 @@ static std::vector<char> readFile( const std::string& filename )
 const std::vector<Vertex> vertices = {
     {{0.0f, -0.5f}, {1.f, 0.f, 0.f}},
     {{0.5f, 0.5f},  {0.f, 1.f, 0.f}},
-    {{-0.5f, 0.5f}, {0.f, 0.f, 1.f}}
+    {{-0.5f, 0.5f}, {0.f, 0.f, 1.f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+};
+
+const std::vector<uint16_t> indices = {
+    0, 1, 2, 2, 3, 0 
 };

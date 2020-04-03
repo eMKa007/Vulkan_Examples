@@ -46,6 +46,7 @@ void TutorialApp::initVulkan()
     this->createFramebuffers();
     this->createCommandPool();
     this->createVertexBuffer();
+    this->createIndexBuffer();
     this->createCommandBuffers();
     this->createSyncObjects();
 }
@@ -583,6 +584,47 @@ void TutorialApp::createVertexBuffer()
     copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
 
     /* Clean up resources */
+    vkDestroyBuffer(this->device, stagingBuffer, nullptr);
+    vkFreeMemory(this->device, stagingBufferMemory, nullptr);
+}
+
+void TutorialApp::createIndexBuffer()
+{
+    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+    
+    /* With additional staging buffer copy data to GPU memory. */
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
+    /* Create buffer for storing indices data. */
+    createBuffer(bufferSize,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        stagingBuffer,
+        stagingBufferMemory);
+
+    /* Map memory to hold indices data. */
+    void* data;
+    if(vkMapMemory(this->device, stagingBufferMemory, 0, bufferSize, 0, &data) != VK_SUCCESS )
+        throw std::runtime_error("Failed to create indices staging buffer! :( \n");
+    
+    /* Copy data to mapped memory. */
+    memcpy(data, indices.data(), (size_t)bufferSize);
+
+    /* Unmap memory to free resources. */
+    vkUnmapMemory(this->device, stagingBufferMemory);
+
+    /* Create buffer to hold indices data on GPU. */
+    createBuffer(bufferSize,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        indexBuffer,
+        indexBufferMemory);
+
+    /* Copy data to GPU indices buffer */
+    copyBuffer(stagingBuffer, indexBuffer, bufferSize);
+
+    /* Free resources */
     vkDestroyBuffer(this->device, stagingBuffer, nullptr);
     vkFreeMemory(this->device, stagingBufferMemory, nullptr);
 }
@@ -1130,6 +1172,10 @@ void TutorialApp::mainLoop()
 void TutorialApp::cleanup()
 {
     this->cleanupSwapChain();
+
+    /* Destroy Index Buffer and allocated to it memory */
+    vkDestroyBuffer(device, indexBuffer, nullptr);
+    vkFreeMemory(device, indexBufferMemory, nullptr);
 
     /* Destroy Vertex Buffer and allocated to it memory */
     vkDestroyBuffer(this->device, this->vertexBuffer, nullptr);
