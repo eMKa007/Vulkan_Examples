@@ -185,6 +185,8 @@ private:
     VkPresentModeKHR chooseSwapPresentMode( const std::vector<VkPresentModeKHR>& availablePresentModes );
     VkExtent2D chooseSwapExtent( const VkSurfaceCapabilitiesKHR& capabilities );
     VkShaderModule createShaderModule( const std::vector<char>& code );
+    void createBuffer(VkDeviceSize deviceSize, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+
     void recreateSwapChain();
     void cleanupSwapChain();
 

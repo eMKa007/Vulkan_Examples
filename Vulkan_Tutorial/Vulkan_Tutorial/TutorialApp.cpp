@@ -549,40 +549,20 @@ void TutorialApp::createCommandPool()
 
 void TutorialApp::createVertexBuffer()
 {
-    /* Specify memory desired type and size */
-    VkBufferCreateInfo bufferInfo = {};
-    bufferInfo.sType    = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size     = sizeof(vertices[0]) * vertices.size();    // Size of buffer in bytes
-    bufferInfo.usage    = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    bufferInfo.flags    = 0;    /* No additional parameters */
-    bufferInfo.sharingMode  = VK_SHARING_MODE_EXCLUSIVE;
-
-    if(vkCreateBuffer(this->device, &bufferInfo, nullptr, &this->vertexBuffer) != VK_SUCCESS )
-        throw std::runtime_error("Failed to create vertex buffer. :( \n");
-
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(this->device, this->vertexBuffer, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize    = memRequirements.size;
-    allocInfo.memoryTypeIndex   = this->findMemoryType(memRequirements.memoryTypeBits, 
-                                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
-                                                        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ); // Mapped memory always matches the contents of the allocated memory.
- 
-    if(vkAllocateMemory(this->device, &allocInfo, nullptr, &this->vertexBufferMemory))
-        throw std::runtime_error("Failed to allocate vertex buffer memory! :( \n");
-
-    /* Bind created memory to vertex buffer object */
-    vkBindBufferMemory(this->device, this->vertexBuffer, this->vertexBufferMemory, 0);
+    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+    createBuffer(bufferSize, 
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        this->vertexBuffer,
+        this->vertexBufferMemory);
 
     /* Mappring buffer memory - filling allocated memory with vertex data */
     void* data; //Pointer to the mapped memory. 
-    if( vkMapMemory(this->device, this->vertexBufferMemory, 0, bufferInfo.size, 0, &data) != VK_SUCCESS )
+    if( vkMapMemory(this->device, this->vertexBufferMemory, 0, bufferSize, 0, &data) != VK_SUCCESS )
         throw std::runtime_error("Failed to map vertex buffer memory! :( \n");
     
     /* Copy vertices data to mapped area */
-    memcpy(data, vertices.data(), (size_t)bufferInfo.size);
+    memcpy(data, vertices.data(), (size_t)bufferSize);
 
     /* Unmap a previously mapped memory object as data was copied. */
     vkUnmapMemory(this->device, this->vertexBufferMemory);
@@ -827,6 +807,34 @@ VkShaderModule TutorialApp::createShaderModule(const std::vector<char>& code)
         throw new std::runtime_error("Failed to create shader module!");
 
     return shaderModule;
+}
+
+void TutorialApp::createBuffer(VkDeviceSize deviceSize, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer & buffer, VkDeviceMemory & bufferMemory)
+{
+    /* Specify memory desired type and size */
+    VkBufferCreateInfo bufferInfo = {};
+    bufferInfo.sType    = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size     = deviceSize;                           /* Size of buffer in bytes */
+    bufferInfo.usage    = usage;
+    bufferInfo.flags    = 0;                                    /* No additional parameters */
+    bufferInfo.sharingMode  = VK_SHARING_MODE_EXCLUSIVE;
+
+    if(vkCreateBuffer(this->device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS )
+        throw std::runtime_error("Failed to create vertex buffer. :( \n");
+
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(this->device, buffer, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize    = memRequirements.size;
+    allocInfo.memoryTypeIndex   = this->findMemoryType(memRequirements.memoryTypeBits, properties ); // Mapped memory always matches the contents of the allocated memory.
+ 
+    if(vkAllocateMemory(this->device, &allocInfo, nullptr, &bufferMemory))
+        throw std::runtime_error("Failed to allocate vertex buffer memory! :( \n");
+
+    /* Bind created memory to vertex buffer object */
+    vkBindBufferMemory(this->device, buffer, bufferMemory, 0);
 }
 
 void TutorialApp::recreateSwapChain()
