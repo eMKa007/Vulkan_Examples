@@ -49,6 +49,8 @@ void TutorialApp::initVulkan()
     this->createVertexBuffer();
     this->createIndexBuffer();
     this->createUniformBuffers();
+    this->createDescriptorPool();
+    this->createDescriptorSets();
     this->createCommandBuffers();
     this->createSyncObjects();
 }
@@ -429,7 +431,7 @@ void TutorialApp::createGraphicsPipeline()
     rasterizer.polygonMode              = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth                = 1.f;        // Width - number of fragments
     rasterizer.cullMode                 = VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace                = VK_FRONT_FACE_CLOCKWISE;
+    rasterizer.frontFace                = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
     /* Add factor to depth values - useful in shadow mapping */
     rasterizer.depthBiasEnable          = VK_FALSE;
@@ -673,6 +675,69 @@ void TutorialApp::createUniformBuffers()
     /* Separate function will update buffers in every frame so it is now required to map memory here. */
 }
 
+void TutorialApp::createDescriptorPool()
+{
+    /* Provide information about descriptors type of our descriptor sets and how many of them. 
+    *  This structure is referenced in by the main VkDescriptorPoolCreateInfo structure. 
+    */
+    VkDescriptorPoolSize poolSize = {};
+    poolSize.type   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSize.descriptorCount    = static_cast<uint32_t>(this->swapChainImages.size());
+    
+    /* Allocate one of this descriptor for every frame. */
+    VkDescriptorPoolCreateInfo poolInfo = {};
+    poolInfo.sType  = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.poolSizeCount  = 1;
+    poolInfo.pPoolSizes     = &poolSize;
+    poolInfo.maxSets        = static_cast<uint32_t>(this->swapChainImages.size());
+    poolInfo.flags          = 0; /* Default Value */
+
+    if(vkCreateDescriptorPool(this->device, &poolInfo, nullptr, &this->descriptorPool) != VK_SUCCESS )
+        throw std::runtime_error("Failed to create descriptor pool. :( \n");
+    
+}
+
+void TutorialApp::createDescriptorSets()
+{
+    /* We will create one descriptor set for each swap chain image- all with the same layout. */
+    std::vector<VkDescriptorSetLayout> layouts(this->swapChainImages.size(), this->descriptorSetLayout);
+
+    VkDescriptorSetAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool        = this->descriptorPool;
+    allocInfo.descriptorSetCount    = static_cast<uint32_t>(swapChainImages.size());
+    allocInfo.pSetLayouts           = layouts.data();
+
+    /* Allocate every descriptor set */
+    this->descriptorSets.resize(this->swapChainImages.size());
+    if(vkAllocateDescriptorSets(this->device, &allocInfo, this->descriptorSets.data()) != VK_SUCCESS )
+        throw std::runtime_error("Failed to allocate descriptor sets. :( \n");
+
+    /* Configure each descriptor. */
+    for( size_t i = 0; i<this->swapChainImages.size(); i++)
+    {
+        VkDescriptorBufferInfo bufferInfo = {};
+        bufferInfo.buffer   = this->uniformBuffers[i];
+        bufferInfo.offset   = 0;
+        bufferInfo.range    = sizeof(UniformBufferObject);  /* If Updating whole buffer - we can use VK_WHOLE_SIZE */
+    
+        VkWriteDescriptorSet descriptorWrite = {};
+        descriptorWrite.sType   = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite.dstSet  = descriptorSets[i];
+        descriptorWrite.dstBinding      = 0;    /* Destination binding in shader */
+        descriptorWrite.dstArrayElement = 0;    /* Descriptors set can be an arrays, so we have to provide element to update. */
+        
+        descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrite.descriptorCount = 1;
+
+        descriptorWrite.pBufferInfo     = &bufferInfo;      /* Array with the descriptors count structs. */
+        descriptorWrite.pImageInfo      = nullptr;          // Optional
+        descriptorWrite.pTexelBufferView = nullptr;         // Optional
+
+        vkUpdateDescriptorSets(this->device, 1, &descriptorWrite, 0, nullptr);
+    }
+}
+
 void TutorialApp::createCommandBuffers()
 {
     // Allocate and record commands for each swap chain image.
@@ -725,6 +790,16 @@ void TutorialApp::createCommandBuffers()
 
         /* Binding index buffer */
         vkCmdBindIndexBuffer(this->commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
+        /* Bind descriptor sets- to update uniform data. */
+        vkCmdBindDescriptorSets(this->commandBuffers[i], 
+            VK_PIPELINE_BIND_POINT_GRAPHICS, 
+            this->pipelineLayout, 
+            0, 
+            1, 
+            &descriptorSets[i], 
+            0, 
+            nullptr);
 
         /* Draw command by using indexes of vertices. */
         vkCmdDrawIndexed(this->commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
@@ -1045,6 +1120,8 @@ void TutorialApp::recreateSwapChain()
     this->createGraphicsPipeline();
     this->createFramebuffers();
     this->createUniformBuffers();
+    this->createDescriptorPool();
+    this->createDescriptorSets();
     this->createCommandBuffers();
 }
 
@@ -1263,6 +1340,9 @@ void TutorialApp::cleanup()
         vkDestroyBuffer(this->device, this->uniformBuffers[i], nullptr);
         vkFreeMemory(this->device, this->uniformBuffersMemory[i], nullptr);
     }
+
+    /* Destroy descriptor pool which holds sets of descriptors */
+    vkDestroyDescriptorPool(this->device, this->descriptorPool, nullptr);
 
     /* Destroy descriptor set layout which is bounding all of the descriptors. */
     vkDestroyDescriptorSetLayout(this->device, this->descriptorSetLayout, nullptr);

@@ -118,6 +118,7 @@ private:
 
     /* Descriptors Layout - all of the descriptors are combined into single descriptor set layout. */
     VkDescriptorSetLayout descriptorSetLayout;
+    std::vector<VkDescriptorSet> descriptorSets;
 
     /* Pipeline Layouts */
     VkRenderPass renderPass;
@@ -158,6 +159,9 @@ private:
     std::vector<VkBuffer> uniformBuffers;
     std::vector<VkDeviceMemory> uniformBuffersMemory;
 
+    /* Descriptor pool to hold descriptors set. */
+    VkDescriptorPool descriptorPool;
+
 #ifdef NDEBUG
     const bool enableValidationLayers = true;
 #else
@@ -181,6 +185,8 @@ private:
     void createVertexBuffer();
     void createIndexBuffer();
     void createUniformBuffers();
+    void createDescriptorPool();
+    void createDescriptorSets();
     void createCommandBuffers();
     void createSyncObjects();
 
@@ -201,7 +207,6 @@ private:
     void                    createBuffer(VkDeviceSize deviceSize, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     void                    copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
     void                    updateUniformBuffer(uint32_t currentImage);
-
 
     void recreateSwapChain();
     void cleanupSwapChain();
