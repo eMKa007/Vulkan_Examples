@@ -189,17 +189,19 @@ private:
     void initWindow();
 
     /* Auxiliary Functions */
-    bool checkValidationLayerSupport();
-    bool isDeviceSuitable( VkPhysicalDevice device );
-    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
-    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+    bool                    checkValidationLayerSupport();
+    bool                    isDeviceSuitable( VkPhysicalDevice device );
+    QueueFamilyIndices      findQueueFamilies(VkPhysicalDevice device);
+    uint32_t                findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
-    VkSurfaceFormatKHR chooseSwapSurfaceFormat( const std::vector<VkSurfaceFormatKHR>& availableFormats );
-    VkPresentModeKHR chooseSwapPresentMode( const std::vector<VkPresentModeKHR>& availablePresentModes );
-    VkExtent2D chooseSwapExtent( const VkSurfaceCapabilitiesKHR& capabilities );
-    VkShaderModule createShaderModule( const std::vector<char>& code );
-    void createBuffer(VkDeviceSize deviceSize, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+    VkSurfaceFormatKHR      chooseSwapSurfaceFormat( const std::vector<VkSurfaceFormatKHR>& availableFormats );
+    VkPresentModeKHR        chooseSwapPresentMode( const std::vector<VkPresentModeKHR>& availablePresentModes );
+    VkExtent2D              chooseSwapExtent( const VkSurfaceCapabilitiesKHR& capabilities );
+    VkShaderModule          createShaderModule( const std::vector<char>& code );
+    void                    createBuffer(VkDeviceSize deviceSize, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+    void                    copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+    void                    updateUniformBuffer(uint32_t currentImage);
+
 
     void recreateSwapChain();
     void cleanupSwapChain();

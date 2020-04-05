@@ -989,6 +989,37 @@ void TutorialApp::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSiz
     vkFreeCommandBuffers(this->device, this->commandPool, 1, &commandBuffer);
 }
 
+void TutorialApp::updateUniformBuffer(uint32_t currentImage)
+{
+    static auto startTime = std::chrono::high_resolution_clock::now();
+
+    auto currentTime = std::chrono::high_resolution_clock::now();
+
+    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+    /* Update variables inside uniform buffer */
+    UniformBufferObject ubo = {};
+    ubo.model   = glm::rotate(glm::mat4(1.f), time*glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
+    ubo.view    = glm::lookAt(glm::vec3(2.f, 2.f, 2.f), glm::vec3(0.f), glm::vec3(0.f, 0.f, 1.f));
+    ubo.proj    = glm::perspective(glm::radians(45.f),
+                        this->swapChainExtent.width / (float) this->swapChainExtent.height,
+                        0.1f,
+                        10.f);
+    /* GLM was originally designed for OpenGL, it is important to revert scaling factor of Y axis. */
+    ubo.proj[1][1] *= -1;
+
+    /* With providing this information, we can now map memory of the uniform buffer. */
+    void* data;
+    vkMapMemory(this->device, 
+        this->uniformBuffersMemory[currentImage], 
+        0,
+        sizeof(ubo),
+        0,
+        &data );
+    memcpy(data, &ubo, sizeof(ubo));
+    vkUnmapMemory(this->device, this->uniformBuffersMemory[currentImage]);
+}
+
 void TutorialApp::recreateSwapChain()
 {
     /* Handling Window minimization - size of framebuffer is 0 */
@@ -1150,6 +1181,9 @@ void TutorialApp::drawFrame()
     // Mark the image as now being in use by current frame
     this->imagesInFlight[imageIndex] = this->inFlightFences[currentFrame];
     
+    /* With information about current image we can update its uniform buffer. */
+    this->updateUniformBuffer(imageIndex);
+
     /* Submit the command buffer */
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
