@@ -87,6 +87,10 @@ public:
 private:
     const size_t MAX_FRAMES_IN_FLIGHT = 2;
     
+    /* Available and enable API extensions */
+    std::vector<const char*> validationLayers;
+    std::vector<const char*> deviceExtensions;
+
     /* Instance */
     VkInstance instance;
 
@@ -150,8 +154,9 @@ private:
     VkBuffer indexBuffer;               /* Index data for corresponding vertex buffer. */
     VkDeviceMemory indexBufferMemory;
 
-    std::vector<const char*> validationLayers;
-    std::vector<const char*> deviceExtensions;
+    /* Uniform Buffers - they'll be update after every frame so every image in swapchain will have own uniform buffer. */
+    std::vector<VkBuffer> uniformBuffers;
+    std::vector<VkDeviceMemory> uniformBuffersMemory;
 
 #ifdef NDEBUG
     const bool enableValidationLayers = true;
@@ -175,6 +180,7 @@ private:
     void createCommandPool();
     void createVertexBuffer();
     void createIndexBuffer();
+    void createUniformBuffers();
     void createCommandBuffers();
     void createSyncObjects();
 

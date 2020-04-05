@@ -48,6 +48,7 @@ void TutorialApp::initVulkan()
     this->createCommandPool();
     this->createVertexBuffer();
     this->createIndexBuffer();
+    this->createUniformBuffers();
     this->createCommandBuffers();
     this->createSyncObjects();
 }
@@ -650,6 +651,28 @@ void TutorialApp::createIndexBuffer()
     vkFreeMemory(this->device, stagingBufferMemory, nullptr);
 }
 
+void TutorialApp::createUniformBuffers()
+{
+    VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+
+    /* Resize array of buffers to hold buffer for every image in swapchain */
+    this->uniformBuffers.resize(this->swapChainImages.size());
+    this->uniformBuffersMemory.resize(this->swapChainImages.size());
+
+    /* Create Buffer for every of uniformBuffer array member */
+    for( size_t i = 0; i<this->swapChainImages.size(); i++)
+    {
+        this->createBuffer(bufferSize,
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            this->uniformBuffers[i],
+            this->uniformBuffersMemory[i]
+        );
+    }
+
+    /* Separate function will update buffers in every frame so it is now required to map memory here. */
+}
+
 void TutorialApp::createCommandBuffers()
 {
     // Allocate and record commands for each swap chain image.
@@ -990,6 +1013,7 @@ void TutorialApp::recreateSwapChain()
     this->createRenderPass();
     this->createGraphicsPipeline();
     this->createFramebuffers();
+    this->createUniformBuffers();
     this->createCommandBuffers();
 }
 
@@ -1199,12 +1223,19 @@ void TutorialApp::cleanup()
 {
     this->cleanupSwapChain();
 
+    /* Destroy uniform buffer for every image in swapchain. */
+    for (size_t i = 0; i < swapChainImages.size(); i++) 
+    {
+        vkDestroyBuffer(this->device, this->uniformBuffers[i], nullptr);
+        vkFreeMemory(this->device, this->uniformBuffersMemory[i], nullptr);
+    }
+
     /* Destroy descriptor set layout which is bounding all of the descriptors. */
-    vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+    vkDestroyDescriptorSetLayout(this->device, this->descriptorSetLayout, nullptr);
 
     /* Destroy Index Buffer and allocated to it memory */
-    vkDestroyBuffer(device, indexBuffer, nullptr);
-    vkFreeMemory(device, indexBufferMemory, nullptr);
+    vkDestroyBuffer(this->device, this->indexBuffer, nullptr);
+    vkFreeMemory(this->device, this->indexBufferMemory, nullptr);
 
     /* Destroy Vertex Buffer and allocated to it memory */
     vkDestroyBuffer(this->device, this->vertexBuffer, nullptr);
