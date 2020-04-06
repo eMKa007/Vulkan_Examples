@@ -814,10 +814,14 @@ void TutorialApp::createCommandBuffers()
         renderPassInfo.renderArea.offset    = {0,0};
         renderPassInfo.renderArea.extent    = this->swapChainExtent;
         
-        /* Clear color */
-        VkClearValue clearColor = {0.0f, 0.0f, 0.0f, 1.f};
-        renderPassInfo.clearValueCount  = 1;
-        renderPassInfo.pClearValues     = &clearColor;
+        /* Clear values - specify clear operation.
+         * Order of clear values should be same as attachments.
+         */
+        std::array<VkClearValue, 2> clearValues = {};
+        clearValues[0].color = {0.f, 0.f, 0.f, 1.f};
+        clearValues[1].depthStencil = {1.f, 0.f}; 
+        renderPassInfo.clearValueCount  = static_cast<uint32_t>(clearValues.size());
+        renderPassInfo.pClearValues     = clearValues.data();
         
         /* RECORDING */
         vkCmdBeginRenderPass(this->commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
