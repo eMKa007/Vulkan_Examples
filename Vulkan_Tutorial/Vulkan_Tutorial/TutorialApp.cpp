@@ -681,10 +681,10 @@ void TutorialApp::createDescriptorPool()
     *  This structure is referenced in by the main VkDescriptorPoolCreateInfo structure. 
     */
     VkDescriptorPoolSize poolSize = {};
-    poolSize.type   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSize.type   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;    /* Which descriptors types this pool is going to contain. */
     poolSize.descriptorCount    = static_cast<uint32_t>(this->swapChainImages.size());
     
-    /* Allocate one of this descriptor for every frame. */
+    /* Allocate one pool which can contain up to swap images count descriptors sets. */
     VkDescriptorPoolCreateInfo poolInfo = {};
     poolInfo.sType  = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount  = 1;
@@ -694,7 +694,6 @@ void TutorialApp::createDescriptorPool()
 
     if(vkCreateDescriptorPool(this->device, &poolInfo, nullptr, &this->descriptorPool) != VK_SUCCESS )
         throw std::runtime_error("Failed to create descriptor pool. :( \n");
-    
 }
 
 void TutorialApp::createDescriptorSets()

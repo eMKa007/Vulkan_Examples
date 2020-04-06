@@ -23,7 +23,7 @@ struct SwapChainSupportDetails
 };
 
 struct Vertex {
-    glm::vec2 pos;
+    glm::vec3 pos;
     glm::vec3 color;
 
     static VkVertexInputBindingDescription getBindingDescription() 
@@ -55,7 +55,7 @@ struct Vertex {
         /* Description of pos attribute */
         attributeDescriptions[0].binding    = 0;
         attributeDescriptions[0].location   = 0;  /* References to location inside Vertex Shader - 0 for position. */
-        attributeDescriptions[0].format     = VK_FORMAT_R32G32_SFLOAT;  /* Format of vertex position data */
+        attributeDescriptions[0].format     = VK_FORMAT_R32G32B32_SFLOAT;  /* Format of vertex position data */
         attributeDescriptions[0].offset     = offsetof(Vertex, pos);
         
         /* Description of color attribute */
@@ -242,14 +242,20 @@ static std::vector<char> readFile( const std::string& filename )
 
 /* Vertex Data - {{position}, {color}} */
 const std::vector<Vertex> vertices = {
-    {{-0.5f, -0.5f},    {1.0f, 0.0f, 0.0f}},
-    {{0.5f, -0.5f},     {0.0f, 1.0f, 0.0f}},
-    {{0.5f, 0.5f},      {0.0f, 0.0f, 1.0f}},
-    {{-0.5f, 0.5f},     {1.0f, 1.0f, 1.0f}}
+    {{-0.5f, -0.5f, 0.f},    {1.0f, 0.0f, 0.0f}},
+    {{ 0.5f, -0.5f, 0.f},     {0.0f, 1.0f, 0.0f}},
+    {{ 0.5f,  0.5f, 0.f},     {0.0f, 0.0f, 1.0f}},
+    {{-0.5f,  0.5f, 0.f},     {1.0f, 1.0f, 1.0f}},
+
+    {{-0.5f, -0.5f, -0.5f},    {1.0f, 0.0f, 0.0f}},
+    {{ 0.5f, -0.5f, -0.5f},     {0.0f, 1.0f, 0.0f}},
+    {{ 0.5f,  0.5f, -0.5f},     {0.0f, 0.0f, 1.0f}},
+    {{-0.5f,  0.5f, -0.5f},     {1.0f, 1.0f, 1.0f}}
 };
 
 const std::vector<uint16_t> indices = {
-    0, 1, 2, 2, 3, 0 
+    0, 1, 2, 2, 3, 0,
+    4, 5, 6, 6, 7, 4
 };
 
 /* Camera setup - matrices - to be moved in separate class */
