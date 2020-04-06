@@ -1258,6 +1258,7 @@ void TutorialApp::recreateSwapChain()
     this->createImageViews();
     this->createRenderPass();
     this->createGraphicsPipeline();
+    this->createDepthResources();
     this->createFramebuffers();
     this->createUniformBuffers();
     this->createDescriptorPool();
@@ -1267,6 +1268,11 @@ void TutorialApp::recreateSwapChain()
 
 void TutorialApp::cleanupSwapChain()
 {
+    /* Destroy depth resources */
+    vkDestroyImageView(this->device, this->depthImageView, nullptr);
+    vkDestroyImage(this->device, this->depthImage, nullptr);
+    vkFreeMemory(this->device, this->depthImageMemory, nullptr);
+
     for( size_t i = 0; i < swapChainFramebuffers.size(); i++ )
         vkDestroyFramebuffer(this->device, this->swapChainFramebuffers[i], nullptr);
 
@@ -1280,6 +1286,14 @@ void TutorialApp::cleanupSwapChain()
         vkDestroyImageView(this->device, this->swapChainImageViews[i], nullptr);
 
     vkDestroySwapchainKHR(this->device, this->swapChain, nullptr);
+    
+    for (size_t i = 0; i < swapChainImages.size(); i++) 
+    {
+        vkDestroyBuffer(device, uniformBuffers[i], nullptr);
+        vkFreeMemory(device, uniformBuffersMemory[i], nullptr);
+    }
+
+    vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 }
 
 void TutorialApp::initGLFW()
@@ -1473,21 +1487,6 @@ void TutorialApp::mainLoop()
 void TutorialApp::cleanup()
 {
     this->cleanupSwapChain();
-
-    /* Destroy depth resources */
-    vkDestroyImage(this->device, this->depthImage, nullptr);
-    vkDestroyImageView(this->device, this->depthImageView, nullptr);
-    vkFreeMemory(this->device, this->depthImageMemory, nullptr);
-    
-    /* Destroy uniform buffer for every image in swapchain. */
-    for (size_t i = 0; i < swapChainImages.size(); i++) 
-    {
-        vkDestroyBuffer(this->device, this->uniformBuffers[i], nullptr);
-        vkFreeMemory(this->device, this->uniformBuffersMemory[i], nullptr);
-    }
-
-    /* Destroy descriptor pool which holds sets of descriptors */
-    vkDestroyDescriptorPool(this->device, this->descriptorPool, nullptr);
 
     /* Destroy descriptor set layout which is bounding all of the descriptors. */
     vkDestroyDescriptorSetLayout(this->device, this->descriptorSetLayout, nullptr);
