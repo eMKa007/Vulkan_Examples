@@ -331,7 +331,7 @@ void TutorialApp::createRenderPass()
     depthAttachment.finalLayout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     
     VkAttachmentReference depthAttachmentRef = {};
-    depthAttachmentRef.attachment   = 0;
+    depthAttachmentRef.attachment   = 1;
     depthAttachmentRef.layout       = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     
     /* Define subpass attachments */
@@ -472,8 +472,19 @@ void TutorialApp::createGraphicsPipeline()
     multisampling.alphaToCoverageEnable = VK_FALSE;
     multisampling.alphaToOneEnable      = VK_FALSE;
 
-    /* Depth and stencil testing - unused for now. */
+    /* Depth and stencil testing */
     VkPipelineDepthStencilStateCreateInfo depthStencil = {};
+    depthStencil.sType  = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencil.depthTestEnable    = VK_TRUE;
+    depthStencil.depthWriteEnable   = VK_TRUE;
+    depthStencil.depthCompareOp     = VK_COMPARE_OP_LESS;   /* lower depth = closer to screen */
+    depthStencil.depthBoundsTestEnable  = VK_FALSE; /* Depth bounds allow to keep only fragments within specified bounds */
+    depthStencil.minDepthBounds         = 0.f;  /* Optional */
+    depthStencil.maxDepthBounds         = 1.f;  /* Optional */
+    depthStencil.stencilTestEnable      = VK_FALSE;
+    depthStencil.front  = {};                   /* Optional due to stencil test disable. */
+    depthStencil.back   = {};                   /* Optional due to stencil test disable. */
+
 
     /* Color blending */
     VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
@@ -540,7 +551,7 @@ void TutorialApp::createGraphicsPipeline()
     pipelineInfo.pViewportState         = &viewportState;
     pipelineInfo.pRasterizationState    = &rasterizer;
     pipelineInfo.pMultisampleState      = &multisampling;
-    pipelineInfo.pDepthStencilState     = nullptr;
+    pipelineInfo.pDepthStencilState     = &depthStencil;
     pipelineInfo.pColorBlendState       = &colorBlending;
     pipelineInfo.pDynamicState          = nullptr;
     
@@ -819,7 +830,7 @@ void TutorialApp::createCommandBuffers()
          */
         std::array<VkClearValue, 2> clearValues = {};
         clearValues[0].color = {0.f, 0.f, 0.f, 1.f};
-        clearValues[1].depthStencil = {1.f, 0.f}; 
+        clearValues[1].depthStencil = {1.f, 0}; 
         renderPassInfo.clearValueCount  = static_cast<uint32_t>(clearValues.size());
         renderPassInfo.pClearValues     = clearValues.data();
         
