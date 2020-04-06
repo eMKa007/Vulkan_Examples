@@ -44,9 +44,9 @@ void TutorialApp::initVulkan()
     this->createRenderPass();
     this->createDescriptorSetLayout();
     this->createGraphicsPipeline();
+    this->createDepthResources();
     this->createFramebuffers();
     this->createCommandPool();
-    this->createDepthResources();
     this->createVertexBuffer();
     this->createIndexBuffer();
     this->createUniformBuffers();
@@ -566,13 +566,13 @@ void TutorialApp::createFramebuffers()
 
     for(size_t i=0; i< swapChainImageViews.size(); i++)
     {
-        VkImageView attachments[] = { swapChainImageViews[i] };
+        std::array<VkImageView, 2> attachments = { swapChainImageViews[i], depthImageView };
 
         VkFramebufferCreateInfo framebufferInfo = {};
         framebufferInfo.sType   = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass  = this->renderPass;
-        framebufferInfo.attachmentCount = 1;
-        framebufferInfo.pAttachments    = attachments;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.pAttachments    = attachments.data();
         framebufferInfo.width           = swapChainExtent.width;
         framebufferInfo.height          = swapChainExtent.height;
         framebufferInfo.layers          = 1;

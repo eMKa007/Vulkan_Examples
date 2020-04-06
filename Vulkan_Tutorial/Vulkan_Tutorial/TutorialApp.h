@@ -185,9 +185,9 @@ private:
     void createRenderPass();
     void createDescriptorSetLayout();
     void createGraphicsPipeline();
+    void createDepthResources();
     void createFramebuffers();
     void createCommandPool();
-    void createDepthResources();
     void createVertexBuffer();
     void createIndexBuffer();
     void createUniformBuffers();
