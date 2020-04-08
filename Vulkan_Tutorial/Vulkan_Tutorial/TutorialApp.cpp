@@ -1,6 +1,10 @@
 
 #include "TutorialApp.h"
 
+/* Image Loader */
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 /*
 * Callbacks Functionality.
 */
@@ -47,6 +51,7 @@ void TutorialApp::initVulkan()
     this->createDepthResources();
     this->createFramebuffers();
     this->createCommandPool();
+    this->createTextureImage();
     this->createVertexBuffer();
     this->createIndexBuffer();
     this->createUniformBuffers();
@@ -606,6 +611,59 @@ void TutorialApp::createCommandPool()
         throw std::runtime_error("Failed to create command pool :( \n");
 }
 
+void TutorialApp::createTextureImage()
+{
+    /* Local Variables */
+    int texWidth    = 0;
+    int texHeight   = 0;
+    int texChannels = 0;
+
+    /* Load an image from file. */
+    stbi_uc* pixels = stbi_load("Textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    
+    VkDeviceSize imageSize = texWidth * texHeight * 4;  /* 4 bytes per pixel- RGBA values */
+
+    if(!pixels)
+        throw std::runtime_error("Failed to load texture file: textures/texture.jpg :( \n");
+
+    /* Load image via staging buffer. */
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    
+    /* Crate staging buffer */
+    this->createBuffer(imageSize, 
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        stagingBuffer, 
+        stagingBufferMemory
+    );
+
+    /* Copy data directly to staging buffer. */
+    void* data;
+    if(vkMapMemory(this->device, stagingBufferMemory, 0, imageSize, 0, &data) != VK_SUCCESS )
+        throw std::runtime_error("Failed to map staging buffer memory. :( \n");
+    memcpy(data, pixels, static_cast<uint32_t>(imageSize));
+    vkUnmapMemory(this->device, stagingBufferMemory);
+
+    /* Free stbi image data */
+    stbi_image_free(pixels);
+
+    /* Create object to hold image data. */
+    this->createImage(texWidth, 
+        texHeight, 
+        VK_FORMAT_R8G8B8A8_SRGB, 
+        VK_IMAGE_TILING_OPTIMAL, 
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+        textureImage, 
+        textureImageMemory
+    );
+
+    /* Free staging buffer resources. */
+    vkDestroyBuffer(this->device, stagingBuffer, nullptr);
+    vkFreeMemory(this->device, stagingBufferMemory, nullptr);
+}
+
 void TutorialApp::createDepthResources()
 {
     VkFormat depthFormat = this->findDepthFormat();
@@ -1110,11 +1168,12 @@ void TutorialApp::createBuffer(VkDeviceSize deviceSize, VkBufferUsageFlags usage
 
 void TutorialApp::createImage(uint32_t width, uint32_t height, VkFormat imageFormat, VkImageTiling imgTiling, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags imgMemoryProperties, VkImage & image, VkDeviceMemory & imgMemory)
 {
+    /* Create object to hold image data. */
     VkImageCreateInfo imageInfo = {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType     = VK_IMAGE_TYPE_2D;
-    imageInfo.extent.width  = width;
-    imageInfo.extent.height = height;
+    imageInfo.extent.width  = static_cast<uint32_t>(width);
+    imageInfo.extent.height = static_cast<uint32_t>(height);
     imageInfo.extent.depth  = 1;
     imageInfo.mipLevels     = 1;
     imageInfo.arrayLayers   = 1;
@@ -1128,6 +1187,12 @@ void TutorialApp::createImage(uint32_t width, uint32_t height, VkFormat imageFor
     if(vkCreateImage(this->device, &imageInfo, nullptr, &image) != VK_SUCCESS )
         throw std::runtime_error("Failed to create image. :( \n");
 
+    /* Allocate memory for image memory. As like for the buffer. 
+    *  Query for memory requirements for previously created VkImage object.
+    *  Set up allocation info structure.
+    *  Allocate memory for VkDeviceMemory object.
+    *  Bind Allocated memory with previously created VkImage object.
+    */
     VkMemoryRequirements memRequirements = {};
     vkGetImageMemoryRequirements(this->device, image, &memRequirements);
 
@@ -1138,7 +1203,8 @@ void TutorialApp::createImage(uint32_t width, uint32_t height, VkFormat imageFor
 
     if(vkAllocateMemory(this->device, &allocInfo, nullptr, &imgMemory) != VK_SUCCESS )
         throw std::runtime_error("Failed to allocate image memory. :( \n");
-
+    
+    /* Bind image object with image memory object. */
     vkBindImageMemory(this->device, image, imgMemory, 0);
 }
 
@@ -1487,6 +1553,10 @@ void TutorialApp::mainLoop()
 void TutorialApp::cleanup()
 {
     this->cleanupSwapChain();
+
+    /* Destroy and free memory for texture image. */
+    vkDestroyImage(this->device, this->textureImage, nullptr);
+    vkFreeMemory(this->device, this->textureImageMemory, nullptr);
 
     /* Destroy descriptor set layout which is bounding all of the descriptors. */
     vkDestroyDescriptorSetLayout(this->device, this->descriptorSetLayout, nullptr);

@@ -167,6 +167,10 @@ private:
     VkDeviceMemory  depthImageMemory;
     VkImageView     depthImageView;
 
+    /* Texture Variables */
+    VkImage textureImage;
+    VkDeviceMemory textureImageMemory;
+
 #ifdef NDEBUG
     const bool enableValidationLayers = true;
 #else
@@ -188,6 +192,7 @@ private:
     void createDepthResources();
     void createFramebuffers();
     void createCommandPool();
+    void createTextureImage();
     void createVertexBuffer();
     void createIndexBuffer();
     void createUniformBuffers();
