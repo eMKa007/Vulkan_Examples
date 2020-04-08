@@ -223,6 +223,8 @@ private:
     VkImageView             createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
     void                    copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
     void                    updateUniformBuffer(uint32_t currentImage);
+    VkCommandBuffer         beganSingleTimeCommands();
+    void                    endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
     void recreateSwapChain();
     void cleanupSwapChain();

@@ -1230,22 +1230,8 @@ VkImageView TutorialApp::createImageView(VkImage image, VkFormat format, VkImage
 
 void TutorialApp::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
-    VkCommandBufferAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;  /* Each recording of the command buffer will only be submitted once. */
-    allocInfo.commandPool           = this->commandPool;
-    allocInfo.commandBufferCount    = 1;
-    
-    VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(this->device, &allocInfo, &commandBuffer);
-
-    /* Start recording command buffer for copying operations */
-    VkCommandBufferBeginInfo beginInfo = {};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;  
-
-    /* Begin recording */
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+    /* Begin recording command buffer */
+    VkCommandBuffer commandBuffer = this->beganSingleTimeCommands();
 
     /* Provide information about regions to copy from and to. Call CopyBuffer command. */
     VkBufferCopy copyRegion = {};
@@ -1255,19 +1241,7 @@ void TutorialApp::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSiz
     vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
     /* End commands recording. */
-    vkEndCommandBuffer(commandBuffer);
-
-    /* Submit recorded command buffer. Contain only one command- copy. */
-    VkSubmitInfo submitInfo = {};
-    submitInfo.sType    = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount   = 1;
-    submitInfo.pCommandBuffers      = &commandBuffer;
-
-    vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(this->graphicsQueue);
-
-    /* Free resources */
-    vkFreeCommandBuffers(this->device, this->commandPool, 1, &commandBuffer);
+    this->endSingleTimeCommands(commandBuffer);
 }
 
 void TutorialApp::updateUniformBuffer(uint32_t currentImage)
@@ -1299,6 +1273,43 @@ void TutorialApp::updateUniformBuffer(uint32_t currentImage)
         &data );
     memcpy(data, &ubo, sizeof(ubo));
     vkUnmapMemory(this->device, this->uniformBuffersMemory[currentImage]);
+}
+
+VkCommandBuffer TutorialApp::beganSingleTimeCommands()
+{
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool           = this->commandPool;
+    allocInfo.commandBufferCount    = 1;
+
+    /* Allocate command buffer according to allocation structure */
+    VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(this->device, &allocInfo, &commandBuffer);
+
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    beginInfo.pInheritanceInfo  = nullptr;
+
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+    return commandBuffer;
+}
+
+void TutorialApp::endSingleTimeCommands(VkCommandBuffer commandBuffer)
+{
+    vkEndCommandBuffer(commandBuffer);
+
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType    = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount   = 1;
+    submitInfo.pCommandBuffers      = &commandBuffer;
+
+    vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(this->graphicsQueue);
+    
+    vkFreeCommandBuffers(this->device, this->commandPool, 1, &commandBuffer);
 }
 
 void TutorialApp::recreateSwapChain()
