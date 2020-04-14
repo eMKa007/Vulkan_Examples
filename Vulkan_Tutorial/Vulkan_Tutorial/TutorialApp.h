@@ -208,6 +208,7 @@ private:
     /* Auxiliary Functions */
     bool                    checkValidationLayerSupport();
     bool                    isDeviceSuitable( VkPhysicalDevice device );
+
     QueueFamilyIndices      findQueueFamilies(VkPhysicalDevice device);
     uint32_t                findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
     VkFormat                findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
@@ -216,13 +217,20 @@ private:
     VkSurfaceFormatKHR      chooseSwapSurfaceFormat( const std::vector<VkSurfaceFormatKHR>& availableFormats );
     VkPresentModeKHR        chooseSwapPresentMode( const std::vector<VkPresentModeKHR>& availablePresentModes );
     VkExtent2D              chooseSwapExtent( const VkSurfaceCapabilitiesKHR& capabilities );
+
     VkShaderModule          createShaderModule( const std::vector<char>& code );
     void                    createBuffer(VkDeviceSize deviceSize, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     void                    createImage(uint32_t width, uint32_t height, VkFormat imageFormat, VkImageTiling imgTiling, VkImageUsageFlags imgFlags, 
                                 VkMemoryPropertyFlags imgMemoryProperties, VkImage& image, VkDeviceMemory& imgMemory);
     VkImageView             createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+
     void                    copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+    void                    copyBufferToImage( VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
     void                    updateUniformBuffer(uint32_t currentImage);
+    void                    transitionImageLayout(VkImage image, VkFormat format,
+                                VkImageLayout oldLayout, VkImageLayout newLayout);
+
     VkCommandBuffer         beganSingleTimeCommands();
     void                    endSingleTimeCommands(VkCommandBuffer commandBuffer);
 

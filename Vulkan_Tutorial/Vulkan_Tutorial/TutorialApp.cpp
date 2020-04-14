@@ -655,8 +655,31 @@ void TutorialApp::createTextureImage()
         VK_IMAGE_TILING_OPTIMAL, 
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-        textureImage, 
-        textureImageMemory
+        this->textureImage, 
+        this->textureImageMemory
+    );
+
+    /* Copy staging buffer to created texture image.
+    *   1. Transition the texture image to VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (it was created with undefined layout)
+    *   2. Execute the buffer to image copy operation.
+    *   3. Transition image to SHADER_READ_ONLY_OPTIMAL layout to prepare it for shader access.
+    */
+    this->transitionImageLayout(this->textureImage, 
+        VK_FORMAT_R8G8B8A8_SRGB, 
+        VK_IMAGE_LAYOUT_UNDEFINED, 
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+    );
+    
+    this->copyBufferToImage(stagingBuffer, 
+        this->textureImage,
+        static_cast<uint32_t>(texWidth),
+        static_cast<uint32_t>(texHeight)
+    );
+
+    this->transitionImageLayout(this->textureImage,
+        VK_FORMAT_R8G8B8A8_SRGB,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     );
 
     /* Free staging buffer resources. */
@@ -1244,6 +1267,35 @@ void TutorialApp::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSiz
     this->endSingleTimeCommands(commandBuffer);
 }
 
+void TutorialApp::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
+{
+    VkCommandBuffer commandBuffer = this->beganSingleTimeCommands();
+    
+    /* Specify which part of the buffer is going to be copied to which part of the image */
+    VkBufferImageCopy region = {};
+    region.bufferOffset         = 0;
+    region.bufferRowLength      = 0;    /* Pixels are tightly packed */
+    region.bufferImageHeight    = 0;
+
+    region.imageSubresource.aspectMask      = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel        = 0;
+    region.imageSubresource.baseArrayLayer  = 0;
+    region.imageSubresource.layerCount      = 1;
+
+    region.imageOffset  = {0, 0, 0};            /* x, y, z - values */
+    region.imageExtent  = {width, height, 1};   /* width, height, depth - values*/
+
+    vkCmdCopyBufferToImage(commandBuffer,
+        buffer,
+        image,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1,
+        &region
+    );
+
+    this->endSingleTimeCommands(commandBuffer);
+}
+
 void TutorialApp::updateUniformBuffer(uint32_t currentImage)
 {
     static auto startTime = std::chrono::high_resolution_clock::now();
@@ -1273,6 +1325,48 @@ void TutorialApp::updateUniformBuffer(uint32_t currentImage)
         &data );
     memcpy(data, &ubo, sizeof(ubo));
     vkUnmapMemory(this->device, this->uniformBuffersMemory[currentImage]);
+}
+
+void TutorialApp::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
+{
+    VkCommandBuffer commandBuffer = this->beganSingleTimeCommands();
+
+    /* Use VkImageMemoryBarrier to ensure that write to the buffer completes before reading from it. 
+    *  It is equivalent to VkBufferMemoryBarrier for buffers.
+    */
+    VkImageMemoryBarrier barrier = {};
+    barrier.sType   = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.oldLayout   = oldLayout;    /* It is possible to use VK_IMAGE_LAYOUT_UNDEFINED */
+    barrier.newLayout   = newLayout;
+
+    /* If we are using Image Barrier to transfer queue family ownership then these two fields have to be specified.
+    *  If we are not using those- we have to set it to FAMILU_IGNORED (it is not default value).
+    */
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+    /* Specify an image to be affected and specific part of this image (if mipmapping included). */
+    barrier.image   = image;
+    barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseMipLevel   = 0;
+    barrier.subresourceRange.levelCount     = 1;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount     = 1;
+
+    /* Specify type of operations that involve the resource must happen before and after the barrier. */
+    barrier.srcAccessMask   = 0;    // TODO
+    barrier.dstAccessMask   = 0;    // TODO
+
+    vkCmdPipelineBarrier( commandBuffer,
+        0,              /* TODO - specifies in which pipeline stage the operations should occur that should happen before the barrier.  */ 
+        0,              /* TODO - specifies the pipeline stage in which operations will wait on the barrier. */
+        0,
+        0, nullptr,     /* Memory Barriers          */
+        0, nullptr,     /* Buffer Memory Barriers   */
+        1, &barrier     /* Image Memory Barriers    */
+        );
+
+    this->endSingleTimeCommands(commandBuffer);
 }
 
 VkCommandBuffer TutorialApp::beganSingleTimeCommands()
