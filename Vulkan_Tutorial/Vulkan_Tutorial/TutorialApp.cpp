@@ -53,6 +53,7 @@ void TutorialApp::initVulkan()
     this->createCommandPool();
     this->createTextureImage();
     this->createTextureImageView();
+    this->createTextureSamper();
     this->createVertexBuffer();
     this->createIndexBuffer();
     this->createUniformBuffers();
@@ -147,6 +148,7 @@ void TutorialApp::createLogicalDevice()
 
 
     VkPhysicalDeviceFeatures deviceFeatures = {};
+    deviceFeatures.samplerAnisotropy    = VK_TRUE;
 
     VkDeviceCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -674,6 +676,45 @@ void TutorialApp::createTextureImageView()
 {
     /* Images are accessed through image views rather than directly. Thus we have to create one for texture image. */
     this->textureImageView = this->createImageView(this->textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+}
+
+void TutorialApp::createTextureSamper()
+{
+    /* Samplers are user to read texels. They can apply filtering and other transformations to compute final color that is retrieved from sampler. */
+    VkSamplerCreateInfo samplerInfo = {};
+    samplerInfo.sType   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    
+    samplerInfo.magFilter   = VK_FILTER_LINEAR;     /* Describes how to interpolate texels that are magnified. */
+    samplerInfo.minFilter   = VK_FILTER_LINEAR;     /* Describes how to interpolate texels that are minified. */
+    
+    /* U/V/W are axes instead of X/Y/Z. Describes how to access texels while they outside the texture dimensions. */
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;  /* Repeat the texture when going beyond the image dimensions. */
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+    /* Describing Anisotropic Filtering. */
+    samplerInfo.anisotropyEnable    = VK_TRUE;
+    samplerInfo.maxAnisotropy       = 16;       /* Lower value = lower quality but better performance. */
+
+    /* Describing which color to use if clamp to border addressing mode is used. */
+    samplerInfo.borderColor =   VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+
+    /* Describing texture coordinate system. Normalized are [0;1] */
+    samplerInfo.unnormalizedCoordinates =   VK_FALSE;
+
+    /* Describe way to compare texel value to other values. Mainly used for percentage-closer filtering. */
+    samplerInfo.compareEnable   = VK_FALSE;
+    samplerInfo.compareOp       = VK_COMPARE_OP_ALWAYS;
+    
+    /* Specify mipmapping characteristics. */
+    samplerInfo.mipmapMode  = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.mipLodBias  = 0.f;
+    samplerInfo.minLod      = 0.f;
+    samplerInfo.maxLod      = 0.f;
+
+    /* Image Sampler do not refer VkImage object anywhere. It is distinct object that provide interface to extract color from texture. */
+    if(vkCreateSampler(this->device, &samplerInfo, nullptr, &this->textureSampler) != VK_SUCCESS )
+        throw std::runtime_error("Failed to create texture sampler! :( \n");
 }
 
 void TutorialApp::createDepthResources()
@@ -1557,7 +1598,10 @@ bool TutorialApp::isDeviceSuitable(VkPhysicalDevice device)
         swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
     }
 
-    return indices.isComplete() && extensionSupported && swapChainAdequate;
+    VkPhysicalDeviceFeatures supportedFeatures;
+    vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
+
+    return indices.isComplete() && extensionSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
 }
 
 void TutorialApp::drawFrame()
@@ -1676,6 +1720,7 @@ void TutorialApp::cleanup()
     this->cleanupSwapChain();
 
     /* Destroy and free memory for texture image. */
+    vkDestroySampler(this->device, this->textureSampler, nullptr);
     vkDestroyImageView(this->device, this->textureImageView, nullptr);
     vkDestroyImage(this->device, this->textureImage, nullptr);
     vkFreeMemory(this->device, this->textureImageMemory, nullptr);

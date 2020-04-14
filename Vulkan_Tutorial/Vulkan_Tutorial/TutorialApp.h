@@ -98,17 +98,17 @@ private:
     VkSurfaceKHR surface;
 
     /* Device */
-    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-    VkDevice device;
+    VkPhysicalDevice    physicalDevice = VK_NULL_HANDLE;
+    VkDevice            device;
 
     /* Queues */
     VkQueue graphicsQueue;
     VkQueue presentQueue;
 
     /* Swap chain */
-    VkSwapchainKHR swapChain;
-    VkFormat swapChainImageFormat;
-    VkExtent2D swapChainExtent;
+    VkSwapchainKHR  swapChain;
+    VkFormat        swapChainImageFormat;
+    VkExtent2D      swapChainExtent;
 
     /* Swap chain image handles */
     std::vector<VkImage> swapChainImages;
@@ -117,12 +117,12 @@ private:
     std::vector<VkImageView> swapChainImageViews;
 
     /* Descriptors Layout - all of the descriptors are combined into single descriptor set layout. */
-    VkDescriptorSetLayout descriptorSetLayout;
-    std::vector<VkDescriptorSet> descriptorSets;
+    VkDescriptorSetLayout           descriptorSetLayout;
+    std::vector<VkDescriptorSet>    descriptorSets;
 
     /* Pipeline Layouts */
-    VkRenderPass renderPass;
-    VkPipelineLayout pipelineLayout;
+    VkRenderPass        renderPass;
+    VkPipelineLayout    pipelineLayout;
 
     /* Main Graphics Pipeline */
     VkPipeline graphicsPipeline;
@@ -150,13 +150,13 @@ private:
     std::vector<VkFence> imagesInFlight;
 
     /* Vertex Buffer - vertices memory area */
-    VkBuffer vertexBuffer;
-    VkDeviceMemory vertexBufferMemory;
-    VkBuffer indexBuffer;               /* Index data for corresponding vertex buffer. */
-    VkDeviceMemory indexBufferMemory;
+    VkBuffer        vertexBuffer;
+    VkDeviceMemory  vertexBufferMemory;
+    VkBuffer        indexBuffer;               /* Index data for corresponding vertex buffer. */
+    VkDeviceMemory  indexBufferMemory;
 
     /* Uniform Buffers - they'll be update after every frame so every image in swapchain will have own uniform buffer. */
-    std::vector<VkBuffer> uniformBuffers;
+    std::vector<VkBuffer>       uniformBuffers;
     std::vector<VkDeviceMemory> uniformBuffersMemory;
 
     /* Descriptor pool to hold descriptors set. */
@@ -168,9 +168,10 @@ private:
     VkImageView     depthImageView;
 
     /* Texture Variables */
-    VkImage textureImage;
-    VkDeviceMemory textureImageMemory;
-    VkImageView textureImageView;
+    VkImage         textureImage;
+    VkDeviceMemory  textureImageMemory;
+    VkImageView     textureImageView;
+    VkSampler       textureSampler;
 
 #ifdef NDEBUG
     const bool enableValidationLayers = true;
@@ -195,6 +196,7 @@ private:
     void createCommandPool();
     void createTextureImage();
     void createTextureImageView();
+    void createTextureSamper();
     void createVertexBuffer();
     void createIndexBuffer();
     void createUniformBuffers();
