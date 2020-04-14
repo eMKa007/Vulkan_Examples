@@ -170,6 +170,7 @@ private:
     /* Texture Variables */
     VkImage textureImage;
     VkDeviceMemory textureImageMemory;
+    VkImageView textureImageView;
 
 #ifdef NDEBUG
     const bool enableValidationLayers = true;
@@ -193,6 +194,7 @@ private:
     void createFramebuffers();
     void createCommandPool();
     void createTextureImage();
+    void createTextureImageView();
     void createVertexBuffer();
     void createIndexBuffer();
     void createUniformBuffers();

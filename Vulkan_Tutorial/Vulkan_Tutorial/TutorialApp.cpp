@@ -52,6 +52,7 @@ void TutorialApp::initVulkan()
     this->createFramebuffers();
     this->createCommandPool();
     this->createTextureImage();
+    this->createTextureImageView();
     this->createVertexBuffer();
     this->createIndexBuffer();
     this->createUniformBuffers();
@@ -282,27 +283,6 @@ void TutorialApp::createImageViews()
      */
     for ( unsigned int i = 0; i < swapChainImages.size(); i++)
     {
-        //VkImageViewCreateInfo createInfo = {};
-        //createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        //createInfo.image = swapChainImages[i];
-
-        //createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        //createInfo.format = this->swapChainImageFormat;
-
-        //createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        //createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        //createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        //createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-        //createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        //createInfo.subresourceRange.baseMipLevel = 0;
-        //createInfo.subresourceRange.levelCount = 1;
-        //createInfo.subresourceRange.baseArrayLayer = 0;
-        //createInfo.subresourceRange.layerCount = 1;
-
-        //if( vkCreateImageView( this->device, &createInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS)
-        //    throw new std::runtime_error("Failed to create Image View!");
-
         swapChainImageViews[i] = createImageView(swapChainImages[i], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
     }
 }
@@ -688,6 +668,12 @@ void TutorialApp::createTextureImage()
     /* Free staging buffer resources. */
     vkDestroyBuffer(this->device, stagingBuffer, nullptr);
     vkFreeMemory(this->device, stagingBufferMemory, nullptr);
+}
+
+void TutorialApp::createTextureImageView()
+{
+    /* Images are accessed through image views rather than directly. Thus we have to create one for texture image. */
+    this->textureImageView = this->createImageView(this->textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 void TutorialApp::createDepthResources()
@@ -1690,6 +1676,7 @@ void TutorialApp::cleanup()
     this->cleanupSwapChain();
 
     /* Destroy and free memory for texture image. */
+    vkDestroyImageView(this->device, this->textureImageView, nullptr);
     vkDestroyImage(this->device, this->textureImage, nullptr);
     vkFreeMemory(this->device, this->textureImageMemory, nullptr);
 
