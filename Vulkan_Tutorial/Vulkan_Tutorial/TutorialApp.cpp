@@ -663,6 +663,9 @@ void TutorialApp::createTextureImage()
     *   1. Transition the texture image to VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (it was created with undefined layout)
     *   2. Execute the buffer to image copy operation.
     *   3. Transition image to SHADER_READ_ONLY_OPTIMAL layout to prepare it for shader access.
+    *   TODO: Combine these operations in single command buffer and execute them asynchronously.
+    *       Create setupCommandBuffer to record commands into.
+    *       Execute commands with flushSetupCommands() that have been recorded so far. 
     */
     this->transitionImageLayout(this->textureImage, 
         VK_FORMAT_R8G8B8A8_SRGB, 
@@ -1353,13 +1356,40 @@ void TutorialApp::transitionImageLayout(VkImage image, VkFormat format, VkImageL
     barrier.subresourceRange.baseArrayLayer = 0;
     barrier.subresourceRange.layerCount     = 1;
 
-    /* Specify type of operations that involve the resource must happen before and after the barrier. */
-    barrier.srcAccessMask   = 0;    // TODO
-    barrier.dstAccessMask   = 0;    // TODO
+    /* Specify type of operations that involve the resource must happen before and after the barrier. 
+    *  We need to handle two transitions:
+    *   Undefined -> transfer destination           Transfer writes do not have to wait for anything.
+    *   Transfer destination -> shader reading      Shader reads should wait on transfer writes, especially in the fragment shader.
+    */
+    VkPipelineStageFlags sourceStage;
+    VkPipelineStageFlags destinationStage;
+
+    if( oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && 
+        newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+    {
+        barrier.srcAccessMask   = 0;
+        barrier.dstAccessMask   = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+        sourceStage         = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        destinationStage    = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    }
+    else if( oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+        newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+    {
+        barrier.srcAccessMask   = VK_ACCESS_TRANSFER_WRITE_BIT;     /* Transfer write must occur in the pipeline transfer stage. */
+        barrier.dstAccessMask   = VK_ACCESS_SHADER_READ_BIT;
+
+        sourceStage         = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        destinationStage    = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;    /* Image will be read inside fragment shader */
+    }
+    else
+    {
+        throw std::runtime_error("Unsupported layout transition! :( \n");
+    }
 
     vkCmdPipelineBarrier( commandBuffer,
-        0,              /* TODO - specifies in which pipeline stage the operations should occur that should happen before the barrier.  */ 
-        0,              /* TODO - specifies the pipeline stage in which operations will wait on the barrier. */
+        sourceStage,            /* Specifies in which pipeline stage the operations should occur that should happen before the barrier.  */ 
+        destinationStage,       /* Specifies the pipeline stage in which operations will wait on the barrier. */
         0,
         0, nullptr,     /* Memory Barriers          */
         0, nullptr,     /* Buffer Memory Barriers   */
