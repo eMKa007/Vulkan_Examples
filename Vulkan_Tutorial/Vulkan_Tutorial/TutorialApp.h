@@ -25,6 +25,7 @@ struct SwapChainSupportDetails
 struct Vertex {
     glm::vec3 pos;
     glm::vec3 color;
+    glm::vec2 texCoord;
 
     static VkVertexInputBindingDescription getBindingDescription() 
     {
@@ -48,21 +49,26 @@ struct Vertex {
     *       uvec4: VK_FORMAT_R32G32B32A32_UINT
     *       double: VK_FORMAT_R64_SFLOAT
     */
-    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() 
+    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() 
     {
-        std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions = {};
+        std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions = {};
 
         /* Description of pos attribute */
         attributeDescriptions[0].binding    = 0;
         attributeDescriptions[0].location   = 0;  /* References to location inside Vertex Shader - 0 for position. */
-        attributeDescriptions[0].format     = VK_FORMAT_R32G32B32_SFLOAT;  /* Format of vertex position data */
+        attributeDescriptions[0].format     = VK_FORMAT_R32G32B32_SFLOAT;  /* Format of vertex position data - vec3 */
         attributeDescriptions[0].offset     = offsetof(Vertex, pos);
         
         /* Description of color attribute */
         attributeDescriptions[1].binding    = 0;
         attributeDescriptions[1].location   = 1;
-        attributeDescriptions[1].format     = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[1].format     = VK_FORMAT_R32G32B32_SFLOAT;   /* vec3 format */
         attributeDescriptions[1].offset     = offsetof(Vertex, color);
+
+        attributeDescriptions[2].binding    = 0;
+        attributeDescriptions[2].location   = 2;
+        attributeDescriptions[2].format     = VK_FORMAT_R32G32_SFLOAT;      /* vec2 format */
+        attributeDescriptions[2].offset     = offsetof(Vertex, texCoord);
 
         return attributeDescriptions;
     }
@@ -272,15 +278,15 @@ static std::vector<char> readFile( const std::string& filename )
 
 /* Vertex Data - {{position}, {color}} */
 const std::vector<Vertex> vertices = {
-    {{-0.5f, -0.5f, 0.f},    {1.0f, 0.0f, 0.0f}},
-    {{ 0.5f, -0.5f, 0.f},     {0.0f, 1.0f, 0.0f}},
-    {{ 0.5f,  0.5f, 0.f},     {0.0f, 0.0f, 1.0f}},
-    {{-0.5f,  0.5f, 0.f},     {1.0f, 1.0f, 1.0f}},
+    {{-0.5f, -0.5f, 0.f},    {1.0f, 0.0f, 0.0f}, {1.0f, 0.f}},
+    {{ 0.5f, -0.5f, 0.f},    {0.0f, 1.0f, 0.0f}, {0.0f, 0.f}},
+    {{ 0.5f,  0.5f, 0.f},    {0.0f, 0.0f, 1.0f}, {0.0f, 1.f}},
+    {{-0.5f,  0.5f, 0.f},    {1.0f, 1.0f, 1.0f}, {1.0f, 1.f}},
 
-    {{-0.5f, -0.5f, -0.5f},    {1.0f, 0.0f, 0.0f}},
-    {{ 0.5f, -0.5f, -0.5f},     {0.0f, 1.0f, 0.0f}},
-    {{ 0.5f,  0.5f, -0.5f},     {0.0f, 0.0f, 1.0f}},
-    {{-0.5f,  0.5f, -0.5f},     {1.0f, 1.0f, 1.0f}}
+    {{-0.5f, -0.5f, -0.5f},     {1.0f, 0.0f, 0.0f}, {1.0f, 0.f}},
+    {{ 0.5f, -0.5f, -0.5f},     {0.0f, 1.0f, 0.0f}, {0.0f, 0.f}},
+    {{ 0.5f,  0.5f, -0.5f},     {0.0f, 0.0f, 1.0f}, {0.0f, 1.f}},
+    {{-0.5f,  0.5f, -0.5f},     {1.0f, 1.0f, 1.0f}, {1.0f, 1.f}}
 };
 
 const std::vector<uint16_t> indices = {

@@ -362,11 +362,20 @@ void TutorialApp::createDescriptorSetLayout()
     uboLayoutBinding.descriptorCount    = 1;
     uboLayoutBinding.pImmutableSamplers = nullptr;
 
+    /* Binding to texture image sampler. */
+    VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
+    samplerLayoutBinding.binding    = 1;
+    samplerLayoutBinding.descriptorCount    = 1;
+    samplerLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    samplerLayoutBinding.pImmutableSamplers = nullptr;
+    samplerLayoutBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;  /* Descriptor will be referenced in fragment shader stage. */
+
     /* Layout info describing all of the bindings. */
+    std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding, samplerLayoutBinding};
     VkDescriptorSetLayoutCreateInfo layoutInfo = {};
     layoutInfo.sType    = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 1;
-    layoutInfo.pBindings    = &uboLayoutBinding;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings    = bindings.data();
 
     if( vkCreateDescriptorSetLayout(this->device, &layoutInfo, nullptr, &this->descriptorSetLayout) != VK_SUCCESS )
         throw std::runtime_error("Failed to create Descriptor Set Layout. :( \n");
@@ -844,15 +853,18 @@ void TutorialApp::createDescriptorPool()
     /* Provide information about descriptors type of our descriptor sets and how many of them. 
     *  This structure is referenced in by the main VkDescriptorPoolCreateInfo structure. 
     */
-    VkDescriptorPoolSize poolSize = {};
-    poolSize.type   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;    /* Which descriptors types this pool is going to contain. */
-    poolSize.descriptorCount    = static_cast<uint32_t>(this->swapChainImages.size());
-    
+    std::array<VkDescriptorPoolSize, 2> poolSize = {};
+    poolSize[0].type    = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;    /* Which descriptors types this pool is going to contain. */
+    poolSize[0].descriptorCount     = static_cast<uint32_t>(this->swapChainImages.size());
+    poolSize[1].type    = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    poolSize[1].descriptorCount     = static_cast<uint32_t>(this->swapChainImages.size());
+
+
     /* Allocate one pool which can contain up to swap images count descriptors sets. */
     VkDescriptorPoolCreateInfo poolInfo = {};
     poolInfo.sType  = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount  = 1;
-    poolInfo.pPoolSizes     = &poolSize;
+    poolInfo.poolSizeCount  = static_cast<uint32_t>(poolSize.size());
+    poolInfo.pPoolSizes     = poolSize.data();
     poolInfo.maxSets        = static_cast<uint32_t>(this->swapChainImages.size());
     poolInfo.flags          = 0; /* Default Value */
 
@@ -879,25 +891,51 @@ void TutorialApp::createDescriptorSets()
     /* Configure each descriptor. */
     for( size_t i = 0; i<this->swapChainImages.size(); i++)
     {
+        /* Specify UBO information */
         VkDescriptorBufferInfo bufferInfo = {};
         bufferInfo.buffer   = this->uniformBuffers[i];
         bufferInfo.offset   = 0;
         bufferInfo.range    = sizeof(UniformBufferObject);  /* If Updating whole buffer - we can use VK_WHOLE_SIZE */
     
-        VkWriteDescriptorSet descriptorWrite = {};
-        descriptorWrite.sType   = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet  = descriptorSets[i];
-        descriptorWrite.dstBinding      = 0;    /* Destination binding in shader */
-        descriptorWrite.dstArrayElement = 0;    /* Descriptors set can be an arrays, so we have to provide element to update. */
+        /* Specify Sampler information */
+        VkDescriptorImageInfo imageInfo = {};
+        imageInfo.imageLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageInfo.imageView     = this->textureImageView;
+        imageInfo.sampler       = this->textureSampler;
+
+        std::array<VkWriteDescriptorSet, 2> descriptorWrite = {};
+        /* Descriptor set for buffer object. */
+        descriptorWrite[0].sType   = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite[0].dstSet  = descriptorSets[i];
+        descriptorWrite[0].dstBinding      = 0;    /* Destination binding in shader */
+        descriptorWrite[0].dstArrayElement = 0;    /* Descriptors set can be an arrays, so we have to provide element to update. */
         
-        descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptorWrite.descriptorCount = 1;
+        descriptorWrite[0].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrite[0].descriptorCount = 1;
 
-        descriptorWrite.pBufferInfo     = &bufferInfo;      /* Array with the descriptors count structs. */
-        descriptorWrite.pImageInfo      = nullptr;          // Optional
-        descriptorWrite.pTexelBufferView = nullptr;         // Optional
+        descriptorWrite[0].pBufferInfo     = &bufferInfo;      /* Array with the descriptors count structs. */
+        descriptorWrite[0].pImageInfo      = nullptr;          /* Optional */
+        descriptorWrite[0].pTexelBufferView = nullptr;         /* Optional */
 
-        vkUpdateDescriptorSets(this->device, 1, &descriptorWrite, 0, nullptr);
+        /* Descriptor set for texture sampler image info. */
+        descriptorWrite[1].sType   = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite[1].dstSet  = descriptorSets[i];
+        descriptorWrite[1].dstBinding      = 1;    /* Destination binding in shader */
+        descriptorWrite[1].dstArrayElement = 0;    /* Descriptors set can be an arrays, so we have to provide element to update. */
+        
+        descriptorWrite[1].descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrite[1].descriptorCount = 1;
+
+        descriptorWrite[1].pBufferInfo     = nullptr;          /* Optional */
+        descriptorWrite[1].pImageInfo      = &imageInfo;       /* Array with the descriptors count structs - image samplers */
+        descriptorWrite[1].pTexelBufferView = nullptr;         /* Optional */
+
+        vkUpdateDescriptorSets(this->device, 
+            static_cast<uint32_t>(descriptorWrite.size()),
+            descriptorWrite.data(), 
+            0, 
+            nullptr
+        );
     }
 }
 
