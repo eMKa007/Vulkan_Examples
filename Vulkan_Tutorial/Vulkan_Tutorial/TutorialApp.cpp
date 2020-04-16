@@ -5,6 +5,10 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+/* Model Loader */
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+
 /*
 * Callbacks Functionality.
 */
@@ -54,6 +58,7 @@ void TutorialApp::initVulkan()
     this->createTextureImage();
     this->createTextureImageView();
     this->createTextureSamper();
+    this->loadModel();
     this->createVertexBuffer();
     this->createIndexBuffer();
     this->createUniformBuffers();
@@ -610,7 +615,7 @@ void TutorialApp::createTextureImage()
     int texChannels = 0;
 
     /* Load an image from file. */
-    stbi_uc* pixels = stbi_load("Textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     
     VkDeviceSize imageSize = texWidth * texHeight * 4;  /* 4 bytes per pixel- RGBA values */
 
@@ -724,6 +729,50 @@ void TutorialApp::createTextureSamper()
     /* Image Sampler do not refer VkImage object anywhere. It is distinct object that provide interface to extract color from texture. */
     if(vkCreateSampler(this->device, &samplerInfo, nullptr, &this->textureSampler) != VK_SUCCESS )
         throw std::runtime_error("Failed to create texture sampler! :( \n");
+}
+
+void TutorialApp::loadModel()
+{
+    /* Vertex attributes */
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    
+    /* Local Warning/Error variable */
+    std::string warn;
+    std::string err;
+
+    /* Load object from *.obj file. */
+    if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str()))
+    {
+        throw std::runtime_error(warn + err);
+    }
+
+    /* Iterate over all of the shapes to combine all of the faces into a single model. */
+    for(const auto& shape : shapes)
+    {
+        for(const auto& index : shape.mesh.indices)
+        {
+            Vertex vertex = {};
+
+            vertex.pos = {
+                attrib.vertices[3 * index.vertex_index+0],
+                attrib.vertices[3 * index.vertex_index+1],
+                attrib.vertices[3 * index.vertex_index+2]
+            };
+
+            vertex.texCoord = {
+                attrib.texcoords[2 * index.texcoord_index+0],
+                1.0f - attrib.texcoords[2 * index.texcoord_index+1]
+            };
+    
+            vertex.color = {1.f, 1.f, 1.f};
+
+            /* Push loaded vertex and indices to vectors. */
+            vertices.push_back(vertex);
+            indices.push_back(indices.size());
+        }
+    }
 }
 
 void TutorialApp::createDepthResources()
@@ -994,7 +1043,7 @@ void TutorialApp::createCommandBuffers()
         vkCmdBindVertexBuffers(this->commandBuffers[i], 0, 1, vertexBuffers, offsets);
 
         /* Binding index buffer */
-        vkCmdBindIndexBuffer(this->commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(this->commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
         /* Bind descriptor sets- to update uniform data. */
         vkCmdBindDescriptorSets(this->commandBuffers[i], 

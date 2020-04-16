@@ -91,6 +91,11 @@ public:
     void run();
 
 private:
+    /* Model Variables */
+    const std::string MODEL_PATH = "Models/chalet.obj";
+    const std::string TEXTURE_PATH = "Textures/chalet.jpg";
+
+    /* Quantity of frames */
     const size_t MAX_FRAMES_IN_FLIGHT = 2;
     
     /* Available and enable API extensions */
@@ -155,7 +160,10 @@ private:
     std::vector<VkFence> inFlightFences;
     std::vector<VkFence> imagesInFlight;
 
-    /* Vertex Buffer - vertices memory area */
+    /* Vertex and Indices Variables */
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
+
     VkBuffer        vertexBuffer;
     VkDeviceMemory  vertexBufferMemory;
     VkBuffer        indexBuffer;               /* Index data for corresponding vertex buffer. */
@@ -203,6 +211,7 @@ private:
     void createTextureImage();
     void createTextureImageView();
     void createTextureSamper();
+    void loadModel();
     void createVertexBuffer();
     void createIndexBuffer();
     void createUniformBuffers();
@@ -275,24 +284,6 @@ static std::vector<char> readFile( const std::string& filename )
 
     return buffer;
 }
-
-/* Vertex Data - {{position}, {color}} */
-const std::vector<Vertex> vertices = {
-    {{-0.5f, -0.5f, 0.f},    {1.0f, 0.0f, 0.0f}, {1.0f, 0.f}},
-    {{ 0.5f, -0.5f, 0.f},    {0.0f, 1.0f, 0.0f}, {0.0f, 0.f}},
-    {{ 0.5f,  0.5f, 0.f},    {0.0f, 0.0f, 1.0f}, {0.0f, 1.f}},
-    {{-0.5f,  0.5f, 0.f},    {1.0f, 1.0f, 1.0f}, {1.0f, 1.f}},
-
-    {{-0.5f, -0.5f, -0.5f},     {1.0f, 0.0f, 0.0f}, {1.0f, 0.f}},
-    {{ 0.5f, -0.5f, -0.5f},     {0.0f, 1.0f, 0.0f}, {0.0f, 0.f}},
-    {{ 0.5f,  0.5f, -0.5f},     {0.0f, 0.0f, 1.0f}, {0.0f, 1.f}},
-    {{-0.5f,  0.5f, -0.5f},     {1.0f, 1.0f, 1.0f}, {1.0f, 1.f}}
-};
-
-const std::vector<uint16_t> indices = {
-    0, 1, 2, 2, 3, 0,
-    4, 5, 6, 6, 7, 4
-};
 
 /* Camera setup - matrices - to be moved in separate class */
 struct UniformBufferObject {
