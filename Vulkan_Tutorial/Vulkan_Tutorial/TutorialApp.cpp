@@ -742,6 +742,9 @@ void TutorialApp::loadModel()
     std::string warn;
     std::string err;
 
+    /* Unique vertices container. */
+    std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
+
     /* Load object from *.obj file. */
     if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str()))
     {
@@ -768,9 +771,14 @@ void TutorialApp::loadModel()
     
             vertex.color = {1.f, 1.f, 1.f};
 
-            /* Push loaded vertex and indices to vectors. */
-            vertices.push_back(vertex);
-            indices.push_back(indices.size());
+            /* Check if same vertex has been already read. */
+            if( uniqueVertices.count(vertex) == 0 )
+            {
+                uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
+                vertices.push_back(vertex);
+            }
+
+            indices.push_back(uniqueVertices[vertex]);
         }
     }
 }

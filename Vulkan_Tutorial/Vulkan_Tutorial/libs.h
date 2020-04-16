@@ -19,9 +19,12 @@
 #include <vector>
 #include <set>
 #include <array>
+#include <unordered_map>
 
 #define GLM_FORCE_RADIANS
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
+#include <gtx/hash.hpp>
 
 #define NDEBUG
