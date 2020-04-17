@@ -127,6 +127,17 @@ private:
     /* Camera Object */
     Camera cam01;
 
+    /* Mouse Input Variables */
+    bool firstMouse = true;
+    double lastMouseX;
+    double lastMouseY;
+
+    double mouseX;
+    double mouseY;
+
+    double mouseOffsetX;
+    double mouseOffsetY;
+
     /* Model Variables */
     const std::string MODEL_PATH = "Models/bunny.obj";
     const std::string TEXTURE_PATH = "Textures/chalet.jpg";
@@ -286,6 +297,7 @@ private:
     void                    updateDT();
     void                    updateUniformBuffer(uint32_t currentImage);
     void                    updateKeyboardInput();
+    void                    updateMouseInput();
     void                    transitionImageLayout(VkImage image, VkFormat format,
                                 VkImageLayout oldLayout, VkImageLayout newLayout);
 

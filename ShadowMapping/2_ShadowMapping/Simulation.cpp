@@ -1434,6 +1434,12 @@ void Simulation::updateVariables(uint32_t imageIndex)
     /* Update Time information */
     this->updateDT();
 
+    /* Update mouse move variables */
+    this->updateMouseInput();
+
+    /* According to mouse offset values update camera pitch/yaw/roll */
+    this->cam01.updateMouseInput(this->dt, this->mouseOffsetX, this->mouseOffsetY);
+
     /* Check keyboard input. */
     this->updateKeyboardInput();
 
@@ -1511,6 +1517,26 @@ void Simulation::updateKeyboardInput()
 	{
 		this->cam01.move(this->dt, DOWNWARD);
 	}
+}
+
+void Simulation::updateMouseInput()
+{
+    glfwGetCursorPos(this->window, &this->mouseX, &this->mouseY);
+
+    if(this->firstMouse)
+    {
+        this->lastMouseX = this->mouseX;
+        this->lastMouseY = this->mouseY;
+        this->firstMouse = false;
+    }
+
+    /* Calculate mouse move offset */
+    this->mouseOffsetX  = this->mouseX - this->lastMouseX;
+    this->mouseOffsetY  = this->mouseY - this->lastMouseY;
+
+    /* Set last X and Y values. */
+    this->lastMouseX    = this->mouseX;
+    this->lastMouseY    = this->mouseY;
 }
 
 void Simulation::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
@@ -1711,6 +1737,9 @@ void Simulation::initWindow()
     */
     glfwSetWindowUserPointer(this->window, this);
     glfwSetFramebufferSizeCallback(this->window, framebufferResizeCallback);
+
+    /* Capture cursor as input mode. */
+    glfwSetInputMode(this->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
 bool Simulation::checkValidationLayerSupport()
