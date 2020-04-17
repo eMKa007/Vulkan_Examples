@@ -27,4 +27,6 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtx/hash.hpp>
 
+#include "Camera.h"
+
 #define NDEBUG

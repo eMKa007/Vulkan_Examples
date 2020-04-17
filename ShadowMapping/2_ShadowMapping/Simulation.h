@@ -119,6 +119,14 @@ public:
     void run();
 
 private:
+    /* Delta Time variables */
+    float currTime;
+    float dt;
+    float lastTime;
+
+    /* Camera Object */
+    Camera cam01;
+
     /* Model Variables */
     const std::string MODEL_PATH = "Models/bunny.obj";
     const std::string TEXTURE_PATH = "Textures/chalet.jpg";
@@ -274,7 +282,10 @@ private:
     void                    copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
     void                    copyBufferToImage( VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
+    void                    updateVariables(uint32_t imageIndex);
+    void                    updateDT();
     void                    updateUniformBuffer(uint32_t currentImage);
+    void                    updateKeyboardInput();
     void                    transitionImageLayout(VkImage image, VkFormat format,
                                 VkImageLayout oldLayout, VkImageLayout newLayout);
 

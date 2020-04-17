@@ -21,7 +21,8 @@ static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
 // ------------------------------------
 
 Simulation::Simulation( unsigned int windowWidth, unsigned int windowHeight, std::string windowName)
-    : windowWidth(windowWidth), windowHeight(windowHeight), windowName(windowName)
+    : windowWidth(windowWidth), windowHeight(windowHeight), windowName(windowName),
+    cam01(glm::vec3(5.f, 8.f, 5.f), glm::vec3(-45.f, -135.f, 0.f), glm::vec3(0.f, 1.f, 0.f))
 {
     validationLayers.push_back("VK_LAYER_KHRONOS_validation");
     deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -776,7 +777,7 @@ void Simulation::loadModel()
                 0.5f, 0.5f
             };
     
-            vertex.color = {0.7f, 0.7f, 0.7f};
+            vertex.color = {1.0f, 1.0f, 1.0f};
 
             /* Check if same vertex has been already read. */
             if( uniqueVertices.count(vertex) == 0 )
@@ -1428,17 +1429,31 @@ void Simulation::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t widt
     this->endSingleTimeCommands(commandBuffer);
 }
 
+void Simulation::updateVariables(uint32_t imageIndex)
+{
+    /* Update Time information */
+    this->updateDT();
+
+    /* Check keyboard input. */
+    this->updateKeyboardInput();
+
+    /* With information about current image we can update its uniform buffer. */
+    this->updateUniformBuffer(imageIndex);
+}
+
+void Simulation::updateDT()
+{
+	this->currTime = static_cast<float>(glfwGetTime());
+	this->dt = this->currTime - this->lastTime;
+	this->lastTime = this->currTime;
+}
+
 void Simulation::updateUniformBuffer(uint32_t currentImage)
 {
-    static auto startTime = std::chrono::high_resolution_clock::now();
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-
     /* Update variables inside uniform buffer */
     UniformBufferObject ubo = {};
-    ubo.model   = glm::rotate(glm::mat4(1.f), time*glm::radians(45.f), glm::vec3(0.f, 0.f, 1.f));
-    ubo.model   *= glm::rotate(glm::mat4(1.f), glm::radians(90.f), glm::vec3(1.f, 0.f, 0.f));
-    ubo.view    = glm::lookAt(glm::vec3(5.f, 5.f, 5.f), glm::vec3(0.f), glm::vec3(0.f, 0.f, 1.f));
+    ubo.model   = glm::mat4(1.f);
+    ubo.view    = this->cam01.getViewMatrix();
     ubo.proj    = glm::perspective(glm::radians(45.f),
                         this->swapChainExtent.width / (float) this->swapChainExtent.height,
                         0.1f,
@@ -1456,6 +1471,46 @@ void Simulation::updateUniformBuffer(uint32_t currentImage)
         &data );
     memcpy(data, &ubo, sizeof(ubo));
     vkUnmapMemory(this->device, this->uniformBuffersMemory[currentImage]);
+}
+
+void Simulation::updateKeyboardInput()
+{
+    // Application
+	if( glfwGetKey( this->window, GLFW_KEY_ESCAPE ) == GLFW_PRESS )
+	{
+		glfwSetWindowShouldClose(this->window, GLFW_TRUE);
+	}
+
+	// Camera
+	if( glfwGetKey( this->window, GLFW_KEY_W ) == GLFW_PRESS )
+	{
+		this->cam01.move(this->dt, FORWARD);
+	}
+
+	if( glfwGetKey( this->window, GLFW_KEY_S ) == GLFW_PRESS )
+	{
+		this->cam01.move(this->dt, BACKWARD);
+	}
+
+	if( glfwGetKey( this->window, GLFW_KEY_A ) == GLFW_PRESS )
+	{
+		this->cam01.move(this->dt, LEFT);
+	}
+
+	if( glfwGetKey( this->window, GLFW_KEY_D ) == GLFW_PRESS )
+	{
+		this->cam01.move(this->dt, RIGTH);
+	}
+
+	if( glfwGetKey( this->window, GLFW_KEY_SPACE ) == GLFW_PRESS )
+	{
+		this->cam01.move(this->dt, UPWARD);
+	}
+
+	if( glfwGetKey( this->window, GLFW_KEY_C ) == GLFW_PRESS )
+	{
+		this->cam01.move(this->dt, DOWNWARD);
+	}
 }
 
 void Simulation::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
@@ -1744,8 +1799,8 @@ void Simulation::drawFrame()
     // Mark the image as now being in use by current frame
     this->imagesInFlight[imageIndex] = this->inFlightFences[currentFrame];
     
-    /* With information about current image we can update its uniform buffer. */
-    this->updateUniformBuffer(imageIndex);
+    /* Update Input and Variables */
+    this->updateVariables(imageIndex);
 
     /* Submit the command buffer */
     VkSubmitInfo submitInfo = {};
