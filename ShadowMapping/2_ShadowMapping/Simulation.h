@@ -26,6 +26,7 @@ struct Vertex {
     glm::vec3 pos;
     glm::vec3 color;
     glm::vec2 texCoord;
+    glm::vec3 normal;
 
     static VkVertexInputBindingDescription getBindingDescription() 
     {
@@ -49,9 +50,9 @@ struct Vertex {
     *       uvec4: VK_FORMAT_R32G32B32A32_UINT
     *       double: VK_FORMAT_R64_SFLOAT
     */
-    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() 
+    static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions() 
     {
-        std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions = {};
+        std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions = {};
 
         /* Description of pos attribute */
         attributeDescriptions[0].binding    = 0;
@@ -65,10 +66,17 @@ struct Vertex {
         attributeDescriptions[1].format     = VK_FORMAT_R32G32B32_SFLOAT;   /* vec3 format */
         attributeDescriptions[1].offset     = offsetof(Vertex, color);
 
+        /* Description of Texture coordinate attribute */
         attributeDescriptions[2].binding    = 0;
         attributeDescriptions[2].location   = 2;
         attributeDescriptions[2].format     = VK_FORMAT_R32G32_SFLOAT;      /* vec2 format */
         attributeDescriptions[2].offset     = offsetof(Vertex, texCoord);
+
+        /* Description of normal vector attribute */
+        attributeDescriptions[3].binding    = 0;
+        attributeDescriptions[3].location   = 3;
+        attributeDescriptions[3].format     = VK_FORMAT_R32G32B32_SFLOAT;      /* vec3 format */
+        attributeDescriptions[3].offset     = offsetof(Vertex, normal);
 
         return attributeDescriptions;
     }
@@ -112,7 +120,7 @@ public:
 
 private:
     /* Model Variables */
-    const std::string MODEL_PATH = "Models/chalet.obj";
+    const std::string MODEL_PATH = "Models/bunny.obj";
     const std::string TEXTURE_PATH = "Textures/chalet.jpg";
 
     /* Quantity of frames */

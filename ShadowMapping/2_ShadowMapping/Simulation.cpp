@@ -764,12 +764,19 @@ void Simulation::loadModel()
                 attrib.vertices[3 * index.vertex_index+2]
             };
 
+            vertex.normal = {
+                attrib.normals[3 * index.vertex_index+0],
+                attrib.normals[3 * index.vertex_index+1],
+                attrib.normals[3 * index.vertex_index+2]
+            };
+
             vertex.texCoord = {
-                attrib.texcoords[2 * index.texcoord_index+0],
-                1.0f - attrib.texcoords[2 * index.texcoord_index+1]
+                /* attrib.texcoords[2 * index.texcoord_index+0],
+                1.0f - attrib.texcoords[2 * index.texcoord_index+1] */
+                0.5f, 0.5f
             };
     
-            vertex.color = {1.f, 1.f, 1.f};
+            vertex.color = {0.7f, 0.7f, 0.7f};
 
             /* Check if same vertex has been already read. */
             if( uniqueVertices.count(vertex) == 0 )
@@ -1424,19 +1431,18 @@ void Simulation::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t widt
 void Simulation::updateUniformBuffer(uint32_t currentImage)
 {
     static auto startTime = std::chrono::high_resolution_clock::now();
-
     auto currentTime = std::chrono::high_resolution_clock::now();
-
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
     /* Update variables inside uniform buffer */
     UniformBufferObject ubo = {};
-    ubo.model   = glm::rotate(glm::mat4(1.f), time*glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
-    ubo.view    = glm::lookAt(glm::vec3(2.f, 2.f, 2.f), glm::vec3(0.f), glm::vec3(0.f, 0.f, 1.f));
+    ubo.model   = glm::rotate(glm::mat4(1.f), time*glm::radians(45.f), glm::vec3(0.f, 0.f, 1.f));
+    ubo.model   *= glm::rotate(glm::mat4(1.f), glm::radians(90.f), glm::vec3(1.f, 0.f, 0.f));
+    ubo.view    = glm::lookAt(glm::vec3(5.f, 5.f, 5.f), glm::vec3(0.f), glm::vec3(0.f, 0.f, 1.f));
     ubo.proj    = glm::perspective(glm::radians(45.f),
                         this->swapChainExtent.width / (float) this->swapChainExtent.height,
                         0.1f,
-                        10.f);
+                        20.f);
     /* GLM was originally designed for OpenGL, it is important to revert scaling factor of Y axis. */
     ubo.proj[1][1] *= -1;
 
