@@ -789,6 +789,51 @@ void Simulation::loadModel()
             indices.push_back(uniqueVertices[vertex]);
         }
     }
+
+    // TODO: Find lowest Y coordinate and place floor according to this value. 
+    int count = vertices.size();
+
+    /* Add floor vertices. */
+    glm::vec3 floor_color   = {0.5f, 0.5f, 0.5f};
+    glm::vec2 floor_tex     = {1.f, 1.f};
+    glm::vec3 floor_normal  = {0.f, 1.f, 0.f};
+
+    Vertex v1   = {};
+    v1.pos      = {-5.f, -0.35f, -5.f};
+    v1.color    = floor_color;
+    v1.normal   = {1.f, 0.f, 0.f};;
+    v1.texCoord = floor_tex;
+
+    Vertex v2   = {};
+    v2.pos      = {-5.f, -0.35f, 5.f};
+    v2.color    = floor_color;
+    v2.normal   = floor_normal;
+    v2.texCoord = floor_tex;
+
+    Vertex v3   = {};
+    v3.pos      = {5.f, -0.35f, 5.f};
+    v3.color    = floor_color;
+    v3.normal   = {0.f, 0.f, 1.f};;
+    v3.texCoord = floor_tex;
+
+    Vertex v4   = {};
+    v4.pos      = {5.f, -0.35f, -5.f};
+    v4.color    = floor_color;
+    v4.normal   = floor_normal;
+    v4.texCoord = floor_tex;
+
+    vertices.push_back(v1);
+    vertices.push_back(v2);
+    vertices.push_back(v3);
+    vertices.push_back(v4);
+
+    indices.push_back(count+0); /* v1 */
+    indices.push_back(count+1); /* v2 */
+    indices.push_back(count+2); /* v3 */
+
+    indices.push_back(count+0); /* v1 */
+    indices.push_back(count+2); /* v3 */
+    indices.push_back(count+3); /* v4 */
 }
 
 void Simulation::createDepthResources()
