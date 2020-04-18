@@ -790,7 +790,13 @@ void Simulation::loadModel()
         }
     }
 
-    // TODO: Find lowest Y coordinate and place floor according to this value. 
+    /* Find minimum Y coordinate value of unordered_map object containing Vertex values. */
+    auto minElement = *std::min_element(uniqueVertices.begin(), uniqueVertices.end(),
+        [](const std::pair<Vertex, uint32_t>& l, const std::pair<Vertex, uint32_t>& r) { return l.first.pos.y < r.first.pos.y; }
+    );
+    float minY = (minElement.first.pos.y);
+
+    /* Vertices count before floor insertion. */
     int count = vertices.size();
 
     /* Add floor vertices. */
@@ -799,25 +805,25 @@ void Simulation::loadModel()
     glm::vec3 floor_normal  = {0.f, 1.f, 0.f};
 
     Vertex v1   = {};
-    v1.pos      = {-5.f, -0.35f, -5.f};
+    v1.pos      = {-5.f, minY, -5.f};
     v1.color    = floor_color;
     v1.normal   = {1.f, 0.f, 0.f};;
     v1.texCoord = floor_tex;
 
     Vertex v2   = {};
-    v2.pos      = {-5.f, -0.35f, 5.f};
+    v2.pos      = {-5.f, minY, 5.f};
     v2.color    = floor_color;
     v2.normal   = floor_normal;
     v2.texCoord = floor_tex;
 
     Vertex v3   = {};
-    v3.pos      = {5.f, -0.35f, 5.f};
+    v3.pos      = {5.f, minY, 5.f};
     v3.color    = floor_color;
     v3.normal   = {0.f, 0.f, 1.f};;
     v3.texCoord = floor_tex;
 
     Vertex v4   = {};
-    v4.pos      = {5.f, -0.35f, -5.f};
+    v4.pos      = {5.f, minY, -5.f};
     v4.color    = floor_color;
     v4.normal   = floor_normal;
     v4.texCoord = floor_tex;
