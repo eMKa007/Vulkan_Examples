@@ -30,3 +30,5 @@
 #include "Camera.h"
 
 #define NDEBUG
+
+#define DEPTH_FORMAT VK_FORMAT_D16_UNORM

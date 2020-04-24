@@ -332,6 +332,7 @@ private:
 
 
     void createOffscreenFramebuffer();
+    void prepareOffscreenRenderPass();
 };
 
 static std::vector<char> readFile( const std::string& filename )

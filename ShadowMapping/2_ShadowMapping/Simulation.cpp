@@ -44,6 +44,9 @@ void Simulation::run()
 
 void Simulation::initVulkan()
 {
+    this->offscreenPass.width   = windowWidth;
+    this->offscreenPass.height  = windowHeight;     /* TODO: Change to bigger shadow map resolution. */
+
     this->createInstance();
     this->createSurface();
     this->pickPhysicalDevice();
@@ -356,6 +359,9 @@ void Simulation::createRenderPass()
     {
         throw std::runtime_error("Failed to create render pass. :( \n");
     }
+
+    /* Offscreen render pass */
+    this->prepareOffscreenRenderPass();
 }
 
 void Simulation::createDescriptorSetLayout()
@@ -599,18 +605,72 @@ void Simulation::createFramebuffers()
 
 void Simulation::createOffscreenFramebuffer()
 {
-    this->offscreenPass.width   = windowWidth;
-    this->offscreenPass.height  = windowHeight;     /* TODO: Change to bigger shadow map resolution. */
+    // Create frame buffer and connect it with created render pass. 
+    VkFramebufferCreateInfo framebufferCreateInfo {};
+    framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferCreateInfo.renderPass        = offscreenPass.renderPass;
+    framebufferCreateInfo.attachmentCount   = 1;
+    framebufferCreateInfo.pAttachments      = &this->offscreenPass.depth.ImageView;
+    framebufferCreateInfo.width             = this->offscreenPass.width;
+    framebufferCreateInfo.height            = this->offscreenPass.height;
+    framebufferCreateInfo.layers            = 1;
 
-    this->createImage(offscreenPass.width, 
-        offscreenPass.height, 
-        VK_FORMAT_D16_UNORM, 
-        VK_IMAGE_TILING_OPTIMAL, 
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        this->offscreenPass.depth.image,
-        this->offscreenPass.depth.memory
-    );
+    if(vkCreateFramebuffer(this->device, &framebufferCreateInfo, nullptr, &this->offscreenPass.frameBuffer) != VK_SUCCESS)
+        throw std::runtime_error("Failed to create offscreen framebuffer :( \n");
+}
+
+/* Crate render pass for offscreen frame buffer */
+void Simulation::prepareOffscreenRenderPass()
+{
+    VkAttachmentDescription depthAttachment{};
+    depthAttachment.format  = DEPTH_FORMAT;
+    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;  /* Clear values at the beginning of the render pass. */
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; /* Store values of depth attachment for further use. */
+    depthAttachment.stencilLoadOp   = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depthAttachment.stencilStoreOp  = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.initialLayout   = VK_IMAGE_LAYOUT_UNDEFINED; /* Initial layout is not important. */
+    depthAttachment.finalLayout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+
+    VkAttachmentReference depthReference = {};
+    depthReference.attachment = 0;
+    depthReference.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass = {};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 0;                   /* No color attachment needed */
+    subpass.pDepthStencilAttachment = &depthReference;
+
+    /* Use subpass dependencies for layout transitions. */
+    std::array<VkSubpassDependency, 2> dependencies;
+
+    dependencies[0].srcSubpass      = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass      = 0;
+    dependencies[0].srcStageMask    = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    dependencies[0].dstStageMask    = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependencies[0].srcAccessMask   = VK_ACCESS_SHADER_READ_BIT;
+    dependencies[0].dstAccessMask   = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    dependencies[1].srcSubpass      = 0;
+    dependencies[1].dstSubpass      = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcStageMask    = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    dependencies[1].dstStageMask    = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    dependencies[1].srcAccessMask   = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstAccessMask   = VK_ACCESS_SHADER_READ_BIT;
+    dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    VkRenderPassCreateInfo renderPassCreateInfo = {};
+    renderPassCreateInfo.sType  = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassCreateInfo.attachmentCount    = 1;
+    renderPassCreateInfo.pAttachments       = &depthAttachment;
+    renderPassCreateInfo.dependencyCount    = static_cast<uint32_t>(dependencies.size());
+    renderPassCreateInfo.pDependencies      = dependencies.data();
+    renderPassCreateInfo.subpassCount       = 1;
+    renderPassCreateInfo.pSubpasses         = &subpass;
+
+    if( vkCreateRenderPass(this->device, &renderPassCreateInfo, nullptr, &this->offscreenPass.renderPass) != VK_SUCCESS )
+        throw std::runtime_error("Failed to create render pass. :( \n");
 }
 
 void Simulation::createCommandPool()
@@ -748,6 +808,24 @@ void Simulation::createTextureSamper()
     /* Image Sampler do not refer VkImage object anywhere. It is distinct object that provide interface to extract color from texture. */
     if(vkCreateSampler(this->device, &samplerInfo, nullptr, &this->textureSampler) != VK_SUCCESS )
         throw std::runtime_error("Failed to create texture sampler! :( \n");
+
+    /* Offscreen depth map sampler */
+    VkSamplerCreateInfo depthSamplerInfo = {};
+    depthSamplerInfo.sType   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    depthSamplerInfo.magFilter   = VK_FILTER_LINEAR;
+    depthSamplerInfo.minFilter   = VK_FILTER_LINEAR;
+    depthSamplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    depthSamplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    depthSamplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    depthSamplerInfo.maxAnisotropy = 1.f;
+    depthSamplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    depthSamplerInfo.mipmapMode  = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    depthSamplerInfo.mipLodBias  = 0.f;
+    depthSamplerInfo.minLod      = 0.f;
+    depthSamplerInfo.maxLod      = 1.f;
+    
+    if(vkCreateSampler(this->device, &samplerInfo, nullptr, &this->offscreenPass.depthSampler) != VK_SUCCESS )
+        throw std::runtime_error("Failed to create offscreen texture sampler! :( \n");
 }
 
 void Simulation::loadModel()
@@ -877,6 +955,23 @@ void Simulation::createDepthResources()
     
     /* Crate Image view bound to previously created depth image */
     this->depthImageView = this->createImageView(this->depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+    /* Create Image for depth map. Offscreen */
+    this->createImage(offscreenPass.width, 
+        offscreenPass.height, 
+        DEPTH_FORMAT, 
+        VK_IMAGE_TILING_OPTIMAL, 
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        this->offscreenPass.depth.image,
+        this->offscreenPass.depth.memory
+    );
+
+    /* Crate Image View for crated depth image. Offscreen */
+    this->offscreenPass.depth.ImageView = this->createImageView(this->offscreenPass.depth.image,
+        DEPTH_FORMAT,
+        VK_IMAGE_ASPECT_DEPTH_BIT
+    );
 }
 
 void Simulation::createVertexBuffer()
@@ -1973,6 +2068,11 @@ void Simulation::cleanup()
 {
     this->cleanupSwapChain();
 
+    vkDestroyFramebuffer(this->device, this->offscreenPass.frameBuffer, nullptr);
+    vkDestroyRenderPass(this->device, this->offscreenPass.renderPass, nullptr);
+
+    vkDestroySampler(this->device, this->offscreenPass.depthSampler, nullptr);
+    vkDestroyImageView(this->device, this->offscreenPass.depth.ImageView, nullptr);
     vkDestroyImage(this->device, this->offscreenPass.depth.image, nullptr);
     vkFreeMemory(this->device, this->offscreenPass.depth.memory, nullptr);
 
