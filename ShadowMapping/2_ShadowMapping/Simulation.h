@@ -315,21 +315,36 @@ private:
 
     /* Offscreen Rendering */
     struct FrameBufferAttachment {
-		VkImage         image;
-		VkDeviceMemory  memory;
-		VkImageView     ImageView;
-	};
+        VkImage         image;
+        VkDeviceMemory  memory;
+        VkImageView     ImageView;
+    };
     struct OffscreenPass {
-		int32_t width;
+        int32_t width;
         int32_t height;
-		VkFramebuffer           frameBuffer;
-		FrameBufferAttachment   depth;
-		VkRenderPass            renderPass;
-		VkSampler               depthSampler;
-		VkDescriptorImageInfo   descriptor;
-	} offscreenPass;
+        VkFramebuffer           frameBuffer;
+        FrameBufferAttachment   depth;
+        VkRenderPass            renderPass;
+        VkSampler               depthSampler;
+        VkDescriptorImageInfo   descriptor;
+    } offscreenPass;
 
+    struct {
+        VkBuffer                buffer = VK_NULL_HANDLE;
+        VkDeviceMemory          memory = VK_NULL_HANDLE;
+        VkDescriptorBufferInfo  descriptor;
+        VkDeviceSize            size = 0;
+        VkDeviceSize            alignment = 0;
+        void*                   mapped = nullptr;
 
+        VkBufferUsageFlags      usageFlags;
+
+        VkMemoryPropertyFlags   memoryPropertyFlags;
+    } OffscreenBuffer;
+
+    struct {
+        glm::mat4 depthMVP;
+    } uboOffscreenVS;
 
     void createOffscreenFramebuffer();
     void prepareOffscreenRenderPass();

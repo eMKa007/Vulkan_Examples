@@ -1074,7 +1074,39 @@ void Simulation::createUniformBuffers()
         );
     }
 
-    /* Separate function will update buffers in every frame so it is now required to map memory here. */
+
+
+
+
+    /* Initialize uniform buffer object for offscreen render pass */
+    this->OffscreenBuffer.size          = sizeof(uboOffscreenVS);
+    this->OffscreenBuffer.usageFlags    = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    this->OffscreenBuffer.memoryPropertyFlags   = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    
+    /* Specify memory desired type and size */
+    VkBufferCreateInfo bufferInfo = {};
+    bufferInfo.sType    = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size     = this->OffscreenBuffer.size;           /* Size of buffer in bytes */
+    bufferInfo.usage    = this->OffscreenBuffer.usageFlags;
+    bufferInfo.flags    = 0;                                    /* No additional parameters */
+    bufferInfo.sharingMode  = VK_SHARING_MODE_EXCLUSIVE;
+
+    if(vkCreateBuffer(this->device, &bufferInfo, nullptr, &this->OffscreenBuffer.buffer) != VK_SUCCESS )
+        throw std::runtime_error("Failed to create vertex buffer. :( \n");
+
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(this->device, this->OffscreenBuffer.buffer, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize    = memRequirements.size;
+    allocInfo.memoryTypeIndex   = this->findMemoryType(memRequirements.memoryTypeBits, this->OffscreenBuffer.memoryPropertyFlags); // Mapped memory always matches the contents of the allocated memory.
+ 
+    if(vkAllocateMemory(this->device, &allocInfo, nullptr, &this->OffscreenBuffer.memory))
+        throw std::runtime_error("Failed to allocate vertex buffer memory! :( \n");
+
+    /* Bind created memory to vertex buffer object */
+    vkBindBufferMemory(this->device, this->OffscreenBuffer.buffer, this->OffscreenBuffer.memory, 0);
 }
 
 void Simulation::createDescriptorPool()
@@ -2067,6 +2099,9 @@ void Simulation::mainLoop()
 void Simulation::cleanup()
 {
     this->cleanupSwapChain();
+
+    vkFreeMemory(this->device, this->OffscreenBuffer.memory, nullptr);
+    vkDestroyBuffer(this->device, this->OffscreenBuffer.buffer, nullptr);
 
     vkDestroyFramebuffer(this->device, this->offscreenPass.frameBuffer, nullptr);
     vkDestroyRenderPass(this->device, this->offscreenPass.renderPass, nullptr);
