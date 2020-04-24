@@ -312,6 +312,26 @@ private:
 
     void mainLoop();
     void cleanup();
+
+    /* Offscreen Rendering */
+    struct FrameBufferAttachment {
+		VkImage         image;
+		VkDeviceMemory  memory;
+		VkImageView     ImageView;
+	};
+    struct OffscreenPass {
+		int32_t width;
+        int32_t height;
+		VkFramebuffer           frameBuffer;
+		FrameBufferAttachment   depth;
+		VkRenderPass            renderPass;
+		VkSampler               depthSampler;
+		VkDescriptorImageInfo   descriptor;
+	} offscreenPass;
+
+
+
+    void createOffscreenFramebuffer();
 };
 
 static std::vector<char> readFile( const std::string& filename )

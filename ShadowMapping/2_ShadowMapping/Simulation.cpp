@@ -593,6 +593,24 @@ void Simulation::createFramebuffers()
         if(vkCreateFramebuffer(this->device, &framebufferInfo, nullptr, &this->swapChainFramebuffers[i]) != VK_SUCCESS)
             throw std::runtime_error("Failed to create framebuffer :( \n");
     }
+
+    this->createOffscreenFramebuffer();
+}
+
+void Simulation::createOffscreenFramebuffer()
+{
+    this->offscreenPass.width   = windowWidth;
+    this->offscreenPass.height  = windowHeight;     /* TODO: Change to bigger shadow map resolution. */
+
+    this->createImage(offscreenPass.width, 
+        offscreenPass.height, 
+        VK_FORMAT_D16_UNORM, 
+        VK_IMAGE_TILING_OPTIMAL, 
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        this->offscreenPass.depth.image,
+        this->offscreenPass.depth.memory
+    );
 }
 
 void Simulation::createCommandPool()
@@ -792,7 +810,7 @@ void Simulation::loadModel()
 
     /* Find minimum Y coordinate value of unordered_map object containing Vertex values. */
     auto minElement = *std::min_element(uniqueVertices.begin(), uniqueVertices.end(),
-        [](const std::pair<Vertex, uint32_t>& l, const std::pair<Vertex, uint32_t>& r) { return l.first.pos.y < r.first.pos.y; }
+        [](const auto& l, const auto& r) { return l.first.pos.y < r.first.pos.y; }
     );
     float minY = (minElement.first.pos.y);
 
@@ -807,7 +825,7 @@ void Simulation::loadModel()
     Vertex v1   = {};
     v1.pos      = {-5.f, minY, -5.f};
     v1.color    = floor_color;
-    v1.normal   = {1.f, 0.f, 0.f};;
+    v1.normal   = floor_normal;
     v1.texCoord = floor_tex;
 
     Vertex v2   = {};
@@ -819,7 +837,7 @@ void Simulation::loadModel()
     Vertex v3   = {};
     v3.pos      = {5.f, minY, 5.f};
     v3.color    = floor_color;
-    v3.normal   = {0.f, 0.f, 1.f};;
+    v3.normal   = floor_normal;
     v3.texCoord = floor_tex;
 
     Vertex v4   = {};
@@ -1954,6 +1972,9 @@ void Simulation::mainLoop()
 void Simulation::cleanup()
 {
     this->cleanupSwapChain();
+
+    vkDestroyImage(this->device, this->offscreenPass.depth.image, nullptr);
+    vkFreeMemory(this->device, this->offscreenPass.depth.memory, nullptr);
 
     /* Destroy and free memory for texture image. */
     vkDestroySampler(this->device, this->textureSampler, nullptr);
