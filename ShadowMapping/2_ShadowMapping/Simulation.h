@@ -385,8 +385,16 @@ struct UniformBufferObject {
     glm::mat4 model;
     glm::mat4 view;
     glm::mat4 proj;
+
+    /* Camera position */
+    glm::vec3 cameraPos;
     
     /* Model-View-Projection matrix from lights POV */
     glm::mat4 depthBiasMVP;
     glm::vec3 lightPos;
+
+    /* Ambient/Diffuse/Specular Lightning */
+    glm::vec3 ambient;
+    glm::vec3 diffuse;
+    glm::vec3 specular;
 };

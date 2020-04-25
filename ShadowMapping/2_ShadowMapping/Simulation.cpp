@@ -873,7 +873,11 @@ void Simulation::loadModel()
                 0.5f, 0.5f
             };
     
-            vertex.color = {1.0f, 1.0f, 1.0f};
+            vertex.color =  {
+                attrib.colors[3 * index.vertex_index+0]/4.f,
+                attrib.colors[3 * index.vertex_index+1]/4.f,
+                attrib.colors[3 * index.vertex_index+2]/4.f
+            };
 
             /* Check if same vertex has been already read. */
             if( uniqueVertices.count(vertex) == 0 )
@@ -898,7 +902,7 @@ void Simulation::loadModel()
     /* Add floor vertices. */
     glm::vec3 floor_color   = {0.5f, 0.5f, 0.5f};
     glm::vec2 floor_tex     = {1.f, 1.f};
-    glm::vec3 floor_normal  = {0.f, 1.f, 0.f};
+    glm::vec3 floor_normal  = glm::vec3(0.f, 1.f, 0.f);
 
     Vertex v1   = {};
     v1.pos      = {-5.f, minY, -5.f};
@@ -1671,8 +1675,14 @@ void Simulation::updateUniformBuffer(uint32_t currentImage)
     /* GLM was originally designed for OpenGL, it is important to revert scaling factor of Y axis. */
     ubo.proj[1][1] *= -1;
 
+    ubo.cameraPos       = this->cam01.getPosition();
+
     ubo.depthBiasMVP    = this->uboOffscreenVS.depthMVP;
     ubo.lightPos        = this->lightPos;
+
+    ubo.ambient     = glm::vec3(0.1f);
+    ubo.diffuse     = glm::vec3(1.f, 1.f, 1.f);
+    ubo.specular    = glm::vec3(1.f, 1.f, 1.f);
 
     /* With providing this information, we can now map memory of the uniform buffer. */
     void* data;
@@ -1690,7 +1700,7 @@ void Simulation::updateOffscreenBuffer()
 {
     // Matrix from light's point of view
     glm::mat4 depthProjectionMatrix = glm::perspective(glm::radians(lightFOV), 1.0f, 0.1f, 20.f);
-    glm::mat4 depthViewMatrix = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0, 1, 0));
+    glm::mat4 depthViewMatrix = glm::lookAt(lightPos, glm::vec3(0.0f, 0.f, 0.f), glm::vec3(0, 1, 0));
     glm::mat4 depthModelMatrix = glm::mat4(1.0f);
 
     uboOffscreenVS.depthMVP = depthProjectionMatrix * depthViewMatrix * depthModelMatrix;
