@@ -234,6 +234,10 @@ private:
     VkImageView     textureImageView;
     VkSampler       textureSampler;
 
+    /* Light position and field of view. */
+    glm::vec3 lightPos = glm::vec3(10.f, 10.f, 10.f);
+    float lightFOV = 45.0f;
+
 #ifdef NDEBUG
     const bool enableValidationLayers = true;
 #else
@@ -296,8 +300,10 @@ private:
     void                    updateVariables(uint32_t imageIndex);
     void                    updateDT();
     void                    updateUniformBuffer(uint32_t currentImage);
+    void                    updateOffscreenBuffer();
     void                    updateKeyboardInput();
     void                    updateMouseInput();
+    void                    updateLight();
     void                    transitionImageLayout(VkImage image, VkFormat format,
                                 VkImageLayout oldLayout, VkImageLayout newLayout);
 
@@ -340,6 +346,8 @@ private:
         VkBufferUsageFlags      usageFlags;
 
         VkMemoryPropertyFlags   memoryPropertyFlags;
+
+        
     } OffscreenBuffer;
 
     struct {
@@ -377,4 +385,8 @@ struct UniformBufferObject {
     glm::mat4 model;
     glm::mat4 view;
     glm::mat4 proj;
+    
+    /* Model-View-Projection matrix from lights POV */
+    glm::mat4 depthBiasMVP;
+    glm::vec3 lightPos;
 };

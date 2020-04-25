@@ -1074,7 +1074,7 @@ void Simulation::createUniformBuffers()
         );
     }
 
-
+    
 
 
 
@@ -1107,6 +1107,8 @@ void Simulation::createUniformBuffers()
 
     /* Bind created memory to vertex buffer object */
     vkBindBufferMemory(this->device, this->OffscreenBuffer.buffer, this->OffscreenBuffer.memory, 0);
+
+
 }
 
 void Simulation::createDescriptorPool()
@@ -1639,6 +1641,12 @@ void Simulation::updateVariables(uint32_t imageIndex)
     /* Check keyboard input. */
     this->updateKeyboardInput();
 
+    /* Update light position */
+    this->updateLight();
+
+    /* Update offscreen uniform buffer */
+    this->updateOffscreenBuffer();
+
     /* With information about current image we can update its uniform buffer. */
     this->updateUniformBuffer(imageIndex);
 }
@@ -1663,16 +1671,38 @@ void Simulation::updateUniformBuffer(uint32_t currentImage)
     /* GLM was originally designed for OpenGL, it is important to revert scaling factor of Y axis. */
     ubo.proj[1][1] *= -1;
 
+    ubo.depthBiasMVP    = this->uboOffscreenVS.depthMVP;
+    ubo.lightPos        = this->lightPos;
+
     /* With providing this information, we can now map memory of the uniform buffer. */
     void* data;
     vkMapMemory(this->device, 
         this->uniformBuffersMemory[currentImage], 
         0,
-        sizeof(ubo),
+        VK_WHOLE_SIZE,
         0,
         &data );
     memcpy(data, &ubo, sizeof(ubo));
     vkUnmapMemory(this->device, this->uniformBuffersMemory[currentImage]);
+}
+
+void Simulation::updateOffscreenBuffer()
+{
+    // Matrix from light's point of view
+    glm::mat4 depthProjectionMatrix = glm::perspective(glm::radians(lightFOV), 1.0f, 0.1f, 20.f);
+    glm::mat4 depthViewMatrix = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0, 1, 0));
+    glm::mat4 depthModelMatrix = glm::mat4(1.0f);
+
+    uboOffscreenVS.depthMVP = depthProjectionMatrix * depthViewMatrix * depthModelMatrix;
+    
+    vkMapMemory( this->device,
+        this->OffscreenBuffer.memory,
+        0,
+        VK_WHOLE_SIZE,
+        0, 
+        &this->OffscreenBuffer.mapped);
+    memcpy(OffscreenBuffer.mapped, &uboOffscreenVS, sizeof(uboOffscreenVS));
+    vkUnmapMemory(this->device, this->OffscreenBuffer.memory);
 }
 
 void Simulation::updateKeyboardInput()
@@ -1733,6 +1763,12 @@ void Simulation::updateMouseInput()
     /* Set last X and Y values. */
     this->lastMouseX    = this->mouseX;
     this->lastMouseY    = this->mouseY;
+}
+
+void Simulation::updateLight()
+{
+    /* TODO: Update light position to make it circle run. */
+
 }
 
 void Simulation::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
