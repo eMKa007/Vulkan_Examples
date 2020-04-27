@@ -26,35 +26,39 @@ layout( location=2 ) in vec2 inTexCoord;
 layout( location=3 ) in vec3 inNormal;
 
 /* Output Data */
-layout( location=0 ) out vec3 fragColor;
-layout( location=1 ) out vec2 fragTexCoord;
-layout( location=2 ) out vec3 fragCameraPos;
+layout( location = 0 ) out struct VS_OUT {
+    vec3 fragColor;
+    vec2 fragTexCoord;
+    vec3 fragCameraPos;
 
-layout( location=3 ) out vec3 fragAmbient;
-layout( location=4 ) out vec3 fragDiffuse;
-layout( location=5 ) out vec3 fragSpecular;
+    vec3 fragAmbient;
+    vec3 fragDiffuse;
+    vec3 fragSpecular;
 
-layout( location=6 ) out vec3 vertexPosition;
-layout( location=7 ) out vec3 vertexNormal;
+    vec3 vertexPosition;
+    vec3 vertexNormal;
 
-layout( location=8 ) out vec3 lightPos;
+    vec3 lightPos;
+} vs_out;
+
+
 
 void main() 
 {
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
 
-    fragColor       = inColor;
-    fragTexCoord    = inTexCoord;
-    fragCameraPos   = ubo.cameraPos;
+    vs_out.fragColor       = inColor;
+    vs_out.fragTexCoord    = inTexCoord;
+    vs_out.fragCameraPos   = ubo.cameraPos;
 
     /* Light components */
-    fragAmbient = ubo.ambient;
-    fragDiffuse = ubo.diffuse;
-    fragSpecular    = ubo.specular;
+    vs_out.fragAmbient = ubo.ambient;
+    vs_out.fragDiffuse = ubo.diffuse;
+    vs_out.fragSpecular    = ubo.specular;
 
     /* Vertex position and normal in world coordinates */
-    vertexPosition  = vec4(ubo.model * vec4(inPosition, 1.f)).xyz;
-    vertexNormal    = vec4(ubo.model * vec4(inNormal, 1.f)).xyz;
+    vs_out.vertexPosition  = vec4(ubo.model * vec4(inPosition, 1.f)).xyz;
+    vs_out.vertexNormal    = vec4(ubo.model * vec4(inNormal, 1.f)).xyz;
 
-    lightPos =  ubo.lightPos;
+    vs_out.lightPos =  ubo.lightPos;
 }
