@@ -176,7 +176,6 @@ private:
 
     /* Descriptors Layout - all of the descriptors are combined into single descriptor set layout. */
     VkDescriptorSetLayout           descriptorSetLayout;
-    std::vector<VkDescriptorSet>    descriptorSets;
 
     /* Pipeline Layouts */
     VkRenderPass        renderPass;
@@ -346,13 +345,24 @@ private:
         VkBufferUsageFlags      usageFlags;
 
         VkMemoryPropertyFlags   memoryPropertyFlags;
-
-        
     } OffscreenBuffer;
 
     struct {
         glm::mat4 depthMVP;
     } uboOffscreenVS;
+
+    struct {
+        VkPipelineLayout offscreen;
+    } pipelineLayouts;
+
+    struct {
+        VkPipeline offscreen;
+    } pipelines;
+
+    struct {
+        VkDescriptorSet offscreen;
+        std::vector<VkDescriptorSet>    scene;
+    } descriptorSets;
 
     void createOffscreenFramebuffer();
     void prepareOffscreenRenderPass();

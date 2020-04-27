@@ -548,6 +548,10 @@ void Simulation::createGraphicsPipeline()
    
     if( vkCreatePipelineLayout(this->device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
         throw std::runtime_error("Failed to create pipeline layout! :(\n");
+
+    /* Create pipeline layout for offscreen render pass. */
+    if( vkCreatePipelineLayout(this->device, &pipelineLayoutInfo, nullptr, &pipelineLayouts.offscreen) != VK_SUCCESS)
+        throw std::runtime_error("Failed to create pipeline layout! :(\n");
     
     /* Combine structures to create pipeline */
     VkGraphicsPipelineCreateInfo pipelineInfo = {};
@@ -574,9 +578,38 @@ void Simulation::createGraphicsPipeline()
     if( vkCreateGraphicsPipelines(this->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &this->graphicsPipeline) != VK_SUCCESS)
         throw std::runtime_error("Failed to create Graphics Pipeline! :( \n");
 
+    /* Offscreen Pipeline - vertex shader only */
+    vertShaderStageInfo.module = createShaderModule(readFile("shaders/offscreen_vert.spv"));
+    shaderStages[0] = vertShaderStageInfo;
+
+    pipelineInfo.stageCount = 1;
+    // No blend attachment states (no color attachments used)
+    colorBlending.attachmentCount = 0;
+    // Cull front faces
+    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+    // Enable depth bias
+    rasterizer.depthBiasEnable = VK_TRUE;
+    
+    /*
+    // Add depth bias to dynamic state, so we can change it at runtime
+    dynamicStateEnables.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
+    dynamicStateCI =
+        vks::initializers::pipelineDynamicStateCreateInfo(
+        dynamicStateEnables.data(),
+        dynamicStateEnables.size(),
+        0);
+    */
+    pipelineInfo.layout     = pipelineLayouts.offscreen;
+    pipelineInfo.renderPass = offscreenPass.renderPass;
+
+    if( vkCreateGraphicsPipelines(this->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &this->pipelines.offscreen) != VK_SUCCESS)
+        throw std::runtime_error("Failed to create Graphics Pipeline- offscreen render pass! :( \n");
+
     /* Tidy up unused objects */
     vkDestroyShaderModule(this->device, fragShaderModule, nullptr);
     vkDestroyShaderModule(this->device, vertShaderModule, nullptr);
+
+    vkDestroyShaderModule(this->device, vertShaderStageInfo.module, nullptr);
 }
 
 void Simulation::createFramebuffers()
@@ -1109,10 +1142,13 @@ void Simulation::createUniformBuffers()
     if(vkAllocateMemory(this->device, &allocInfo, nullptr, &this->OffscreenBuffer.memory))
         throw std::runtime_error("Failed to allocate vertex buffer memory! :( \n");
 
+    // Initialize a default descriptor that covers the whole buffer size
+    this->OffscreenBuffer.descriptor.offset     = 0;
+    this->OffscreenBuffer.descriptor.buffer     = this->OffscreenBuffer.buffer;
+    this->OffscreenBuffer.descriptor.range      = VK_WHOLE_SIZE; 
+
     /* Bind created memory to vertex buffer object */
     vkBindBufferMemory(this->device, this->OffscreenBuffer.buffer, this->OffscreenBuffer.memory, 0);
-
-
 }
 
 void Simulation::createDescriptorPool()
@@ -1122,9 +1158,9 @@ void Simulation::createDescriptorPool()
     */
     std::array<VkDescriptorPoolSize, 2> poolSize = {};
     poolSize[0].type    = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;    /* Which descriptors types this pool is going to contain. */
-    poolSize[0].descriptorCount     = static_cast<uint32_t>(this->swapChainImages.size());
+    poolSize[0].descriptorCount     = static_cast<uint32_t>(this->swapChainImages.size() + 1);  
     poolSize[1].type    = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSize[1].descriptorCount     = static_cast<uint32_t>(this->swapChainImages.size());
+    poolSize[1].descriptorCount     = static_cast<uint32_t>(this->swapChainImages.size() + 1);
 
 
     /* Allocate one pool which can contain up to swap images count descriptors sets. */
@@ -1132,7 +1168,7 @@ void Simulation::createDescriptorPool()
     poolInfo.sType  = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount  = static_cast<uint32_t>(poolSize.size());
     poolInfo.pPoolSizes     = poolSize.data();
-    poolInfo.maxSets        = static_cast<uint32_t>(this->swapChainImages.size());
+    poolInfo.maxSets        = static_cast<uint32_t>(this->swapChainImages.size() + 1);
     poolInfo.flags          = 0; /* Default Value */
 
     if(vkCreateDescriptorPool(this->device, &poolInfo, nullptr, &this->descriptorPool) != VK_SUCCESS )
@@ -1151,8 +1187,8 @@ void Simulation::createDescriptorSets()
     allocInfo.pSetLayouts           = layouts.data();
 
     /* Allocate every descriptor set */
-    this->descriptorSets.resize(this->swapChainImages.size());
-    if(vkAllocateDescriptorSets(this->device, &allocInfo, this->descriptorSets.data()) != VK_SUCCESS )
+    this->descriptorSets.scene.resize(this->swapChainImages.size());
+    if(vkAllocateDescriptorSets(this->device, &allocInfo, this->descriptorSets.scene.data()) != VK_SUCCESS )
         throw std::runtime_error("Failed to allocate descriptor sets. :( \n");
 
     /* Configure each descriptor. */
@@ -1166,14 +1202,14 @@ void Simulation::createDescriptorSets()
     
         /* Specify Sampler information */
         VkDescriptorImageInfo imageInfo = {};
-        imageInfo.imageLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.imageView     = this->textureImageView;
-        imageInfo.sampler       = this->textureSampler;
+        imageInfo.imageLayout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+        imageInfo.imageView     = this->offscreenPass.depth.ImageView;
+        imageInfo.sampler       = this->offscreenPass.depthSampler;
 
         std::array<VkWriteDescriptorSet, 2> descriptorWrite = {};
         /* Descriptor set for buffer object. */
         descriptorWrite[0].sType   = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite[0].dstSet  = descriptorSets[i];
+        descriptorWrite[0].dstSet  = descriptorSets.scene[i];
         descriptorWrite[0].dstBinding      = 0;    /* Destination binding in shader */
         descriptorWrite[0].dstArrayElement = 0;    /* Descriptors set can be an arrays, so we have to provide element to update. */
         
@@ -1186,7 +1222,7 @@ void Simulation::createDescriptorSets()
 
         /* Descriptor set for texture sampler image info. */
         descriptorWrite[1].sType   = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite[1].dstSet  = descriptorSets[i];
+        descriptorWrite[1].dstSet  = descriptorSets.scene[i];
         descriptorWrite[1].dstBinding      = 1;    /* Destination binding in shader */
         descriptorWrite[1].dstArrayElement = 0;    /* Descriptors set can be an arrays, so we have to provide element to update. */
         
@@ -1204,6 +1240,43 @@ void Simulation::createDescriptorSets()
             nullptr
         );
     }
+
+
+
+    /* Configure descriptors for offscreen rendering. */
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &this->descriptorSetLayout;
+    if(vkAllocateDescriptorSets(this->device, &allocInfo, &this->descriptorSets.offscreen) != VK_SUCCESS )
+        throw std::runtime_error("Failed to allocate descriptor sets. :( \n");
+
+    std::array<VkWriteDescriptorSet, 1> writeDescriptorSets = {};
+    
+    /* Specify UBO information */
+    VkDescriptorBufferInfo uboOffscreen = {};
+    uboOffscreen.buffer   = OffscreenBuffer.buffer;
+    uboOffscreen.offset   = 0;
+    uboOffscreen.range    = sizeof(uboOffscreenVS);  /* If Updating whole buffer - we can use VK_WHOLE_SIZE */
+    
+    writeDescriptorSets = {};
+    /* Descriptor set for buffer object. */
+    writeDescriptorSets[0].sType   = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writeDescriptorSets[0].dstSet  = descriptorSets.offscreen;
+    writeDescriptorSets[0].dstBinding      = 0;    /* Destination binding in shader */
+    writeDescriptorSets[0].dstArrayElement = 0;    /* Descriptors set can be an arrays, so we have to provide element to update. */
+        
+    writeDescriptorSets[0].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    writeDescriptorSets[0].descriptorCount = 1;
+
+    writeDescriptorSets[0].pBufferInfo     = &this->OffscreenBuffer.descriptor;      /* Array with the descriptors count structs. */
+    writeDescriptorSets[0].pImageInfo      = nullptr;          /* Optional */
+    writeDescriptorSets[0].pTexelBufferView = nullptr;         /* Optional */
+
+    vkUpdateDescriptorSets(this->device, 
+        static_cast<uint32_t>(writeDescriptorSets.size()),
+        writeDescriptorSets.data(), 
+        0, 
+        nullptr
+    );
 }
 
 void Simulation::createCommandBuffers()
@@ -1269,7 +1342,7 @@ void Simulation::createCommandBuffers()
             this->pipelineLayout, 
             0, 
             1, 
-            &descriptorSets[i], 
+            &descriptorSets.scene[i], 
             0, 
             nullptr);
 
@@ -2145,6 +2218,9 @@ void Simulation::mainLoop()
 void Simulation::cleanup()
 {
     this->cleanupSwapChain();
+
+    vkDestroyPipeline(this->device, this->pipelines.offscreen, nullptr);
+    vkDestroyPipelineLayout(this->device, this->pipelineLayouts.offscreen, nullptr);
 
     vkFreeMemory(this->device, this->OffscreenBuffer.memory, nullptr);
     vkDestroyBuffer(this->device, this->OffscreenBuffer.buffer, nullptr);
