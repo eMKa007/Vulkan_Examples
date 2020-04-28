@@ -142,6 +142,8 @@
     <ClInclude Include="Simulation.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="shaders\offscreen.frag" />
+    <None Include="shaders\offscreen.vert" />
     <None Include="shaders\shader.frag" />
     <None Include="shaders\shader.vert" />
   </ItemGroup>

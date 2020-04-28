@@ -84,7 +84,10 @@ struct Vertex {
     /* Override == operator to specify equality comparison. */
     bool operator==(const Vertex& other) const 
     {
-        return pos == other.pos && color == other.color && texCoord == other.texCoord;
+        return (pos == other.pos) && 
+            (color      == other.color) && 
+            (texCoord   == other.texCoord) && 
+            (normal     == other.normal);
     }
 };
 
@@ -92,11 +95,12 @@ struct Vertex {
 namespace std {
     template<> struct hash<Vertex>
     {
-        size_t operator()(Vertex const& vertex) const
+        size_t operator()(Vertex const& vertex) const noexcept
         {
             return ((hash<glm::vec3>()(vertex.pos) ^ 
                     (hash<glm::vec3>()(vertex.color) << 1 )) >> 1) ^
-                    (hash<glm::vec2>()(vertex.texCoord) << 1);
+                    (hash<glm::vec2>()(vertex.texCoord) << 1) ^
+                    (hash<glm::vec3>()(vertex.normal) << 1);
         }
     };
 }
@@ -347,8 +351,10 @@ private:
         VkMemoryPropertyFlags   memoryPropertyFlags;
     } OffscreenBuffer;
 
-    struct {
-        glm::mat4 depthMVP;
+    struct UBOOffscreenVS {
+        glm::mat4 model;
+        glm::mat4 view;
+        glm::mat4 proj;
     } uboOffscreenVS;
 
     struct {
@@ -400,7 +406,10 @@ struct UniformBufferObject {
     glm::vec3 cameraPos;
     
     /* Model-View-Projection matrix from lights POV */
-    glm::mat4 depthBiasMVP;
+    glm::mat4 DepthModel;
+    glm::mat4 DepthView;
+    glm::mat4 DepthProj;
+
     glm::vec3 lightPos;
 
     /* Ambient/Diffuse/Specular Lightning */

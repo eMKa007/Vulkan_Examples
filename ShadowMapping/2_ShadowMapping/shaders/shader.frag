@@ -57,5 +57,5 @@ void main()
     vec3 diffuse = calculateDiffuse( vs_out.fragDiffuse, vs_out.vertexNormal, vs_out.lightPos, vs_out.vertexPosition );
 
     /* Out color combined with light components */
-    outColor = vec4((ambient + diffuse + specular ) * vs_out.fragColor, 1.0);
+    outColor = vec4((ambient + diffuse + specular ) * vs_out.fragColor, 1.0) * texture(texSampler, gl_FragCoord.xy);
 }

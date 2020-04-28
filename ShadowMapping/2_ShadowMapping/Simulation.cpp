@@ -301,7 +301,7 @@ void Simulation::createImageViews()
 void Simulation::createRenderPass()
 {
     /* COLOR ATTACHMENT */
-    VkAttachmentDescription colorAttachment = {};
+    VkAttachmentDescription colorAttachment {};
     colorAttachment.format  = this->swapChainImageFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;  // Clear data in attachment before rendering.
@@ -317,7 +317,7 @@ void Simulation::createRenderPass()
 
     /* DEPTH ATTACHMENT */
     VkAttachmentDescription depthAttachment = {};
-    depthAttachment.format  = this->findDepthFormat();
+    depthAttachment.format  = DEPTH_FORMAT;//this->findDepthFormat();
     depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     depthAttachment.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;      /* Clear data in attachment before rendering. */
     depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE; /* Do not store depth data for now. */
@@ -528,15 +528,17 @@ void Simulation::createGraphicsPipeline()
     colorBlending.blendConstants[3]  = 0.f;   // Optional
 
     /* Dynamic State */
-    VkDynamicState dynamicStates[] = {
+    std::array<VkDynamicState, 4> dynamicStates[] = {
         VK_DYNAMIC_STATE_VIEWPORT,
-        VK_DYNAMIC_STATE_LINE_WIDTH
+        VK_DYNAMIC_STATE_LINE_WIDTH,
+        VK_DYNAMIC_STATE_SCISSOR,
+        VK_DYNAMIC_STATE_DEPTH_BIAS
     };
    
     VkPipelineDynamicStateCreateInfo dynamicState = {};
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamicState.dynamicStateCount   = 2;
-    dynamicState.pDynamicStates      = dynamicStates;
+    dynamicState.dynamicStateCount   = static_cast<uint32_t>(dynamicStates->size());
+    dynamicState.pDynamicStates      = dynamicStates->data();
 
     /* Pipeline Layout */
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
@@ -589,16 +591,10 @@ void Simulation::createGraphicsPipeline()
     depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     // Enable depth bias
     rasterizer.depthBiasEnable = VK_TRUE;
-    
-    /*
+
     // Add depth bias to dynamic state, so we can change it at runtime
-    dynamicStateEnables.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
-    dynamicStateCI =
-        vks::initializers::pipelineDynamicStateCreateInfo(
-        dynamicStateEnables.data(),
-        dynamicStateEnables.size(),
-        0);
-    */
+    pipelineInfo.pDynamicState = &dynamicState;
+    
     pipelineInfo.layout     = pipelineLayouts.offscreen;
     pipelineInfo.renderPass = offscreenPass.renderPass;
 
@@ -941,25 +937,25 @@ void Simulation::loadModel()
     v1.pos      = {-5.f, minY, -5.f};
     v1.color    = floor_color;
     v1.normal   = floor_normal;
-    v1.texCoord = floor_tex;
+    v1.texCoord = {0.f, 0.f};;
 
     Vertex v2   = {};
     v2.pos      = {-5.f, minY, 5.f};
     v2.color    = floor_color;
     v2.normal   = floor_normal;
-    v2.texCoord = floor_tex;
+    v2.texCoord = {1.f, 1.f};;
 
     Vertex v3   = {};
     v3.pos      = {5.f, minY, 5.f};
     v3.color    = floor_color;
     v3.normal   = floor_normal;
-    v3.texCoord = floor_tex;
+    v3.texCoord = {0.f, 1.f};;
 
     Vertex v4   = {};
     v4.pos      = {5.f, minY, -5.f};
     v4.color    = floor_color;
     v4.normal   = floor_normal;
-    v4.texCoord = floor_tex;
+    v4.texCoord = {0.f, 1.f};;
 
     vertices.push_back(v1);
     vertices.push_back(v2);
@@ -977,7 +973,7 @@ void Simulation::loadModel()
 
 void Simulation::createDepthResources()
 {
-    VkFormat depthFormat = this->findDepthFormat();
+    VkFormat depthFormat = DEPTH_FORMAT;//this->findDepthFormat();
     
     /* Create vkImage object with given properties */
     this->createImage(this->swapChainExtent.width,
@@ -1116,7 +1112,7 @@ void Simulation::createUniformBuffers()
 
 
     /* Initialize uniform buffer object for offscreen render pass */
-    this->OffscreenBuffer.size          = sizeof(uboOffscreenVS);
+    this->OffscreenBuffer.size          = sizeof(UBOOffscreenVS);
     this->OffscreenBuffer.usageFlags    = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     this->OffscreenBuffer.memoryPropertyFlags   = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     
@@ -1198,10 +1194,10 @@ void Simulation::createDescriptorSets()
         VkDescriptorBufferInfo bufferInfo = {};
         bufferInfo.buffer   = this->uniformBuffers[i];
         bufferInfo.offset   = 0;
-        bufferInfo.range    = sizeof(UniformBufferObject);  /* If Updating whole buffer - we can use VK_WHOLE_SIZE */
+        bufferInfo.range    = VK_WHOLE_SIZE;  /* If Updating whole buffer - we can use VK_WHOLE_SIZE */
     
         /* Specify Sampler information */
-        VkDescriptorImageInfo imageInfo = {};
+        VkDescriptorImageInfo imageInfo {};
         imageInfo.imageLayout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
         imageInfo.imageView     = this->offscreenPass.depth.ImageView;
         imageInfo.sampler       = this->offscreenPass.depthSampler;
@@ -1255,7 +1251,7 @@ void Simulation::createDescriptorSets()
     VkDescriptorBufferInfo uboOffscreen = {};
     uboOffscreen.buffer   = OffscreenBuffer.buffer;
     uboOffscreen.offset   = 0;
-    uboOffscreen.range    = sizeof(uboOffscreenVS);  /* If Updating whole buffer - we can use VK_WHOLE_SIZE */
+    uboOffscreen.range    = sizeof(UBOOffscreenVS);  /* If Updating whole buffer - we can use VK_WHOLE_SIZE */
     
     writeDescriptorSets = {};
     /* Descriptor set for buffer object. */
@@ -1293,6 +1289,11 @@ void Simulation::createCommandBuffers()
     if( vkAllocateCommandBuffers(this->device, &allocInfo, this->commandBuffers.data()) != VK_SUCCESS)
         throw std::runtime_error("Failed to allocate command buffers. :( \n");
 
+     /* Clear values - specify clear operation.
+     * Order of clear values should be same as attachments.
+     */
+     std::array<VkClearValue, 2> clearValues;
+
     // Starting command buffer recording
     for( size_t i = 0; i<this->commandBuffers.size(); i++)
     {
@@ -1305,55 +1306,115 @@ void Simulation::createCommandBuffers()
         if( vkBeginCommandBuffer( this->commandBuffers[i], &beginInfo) != VK_SUCCESS)
             throw std::runtime_error("Failed to begin recording command buffer. :( \n");
 
-        VkRenderPassBeginInfo renderPassInfo = {};
-        renderPassInfo.sType    = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass   = this->renderPass;
-        renderPassInfo.framebuffer  = this->swapChainFramebuffers[i];
-        
-        /* Define size of render area */
-        renderPassInfo.renderArea.offset    = {0,0};
-        renderPassInfo.renderArea.extent    = this->swapChainExtent;
-        
-        /* Clear values - specify clear operation.
-         * Order of clear values should be same as attachments.
-         */
-        std::array<VkClearValue, 2> clearValues = {};
-        clearValues[0].color = {0.f, 0.f, 0.f, 1.f};
-        clearValues[1].depthStencil = {1.f, 0}; 
-        renderPassInfo.clearValueCount  = static_cast<uint32_t>(clearValues.size());
-        renderPassInfo.pClearValues     = clearValues.data();
-        
-        /* RECORDING */
-        vkCmdBeginRenderPass(this->commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-        
-        vkCmdBindPipeline(this->commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphicsPipeline);
+        /*
+            First render pass: Generate shadow map by rendering the scene from light's POV
+        */
+        {
+            clearValues[0].depthStencil = {1.f, 0};
 
-        /* Binding vertex buffer */
-        VkBuffer vertexBuffers[] = {this->vertexBuffer};
-        VkDeviceSize offsets[] = {0};
-        vkCmdBindVertexBuffers(this->commandBuffers[i], 0, 1, vertexBuffers, offsets);
+            VkRenderPassBeginInfo renderPassInfo {};
+            renderPassInfo.sType    = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+            renderPassInfo.renderPass   = this->offscreenPass.renderPass;
+            renderPassInfo.framebuffer  = this->offscreenPass.frameBuffer;
+            renderPassInfo.renderArea.extent.width      = this->offscreenPass.width;
+            renderPassInfo.renderArea.extent.height     = this->offscreenPass.height;
+            renderPassInfo.renderArea.offset            = {0, 0};
+            renderPassInfo.clearValueCount              = 1;
+            renderPassInfo.pClearValues                 = clearValues.data();
 
-        /* Binding index buffer */
-        vkCmdBindIndexBuffer(this->commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+            vkCmdBeginRenderPass(this->commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-        /* Bind descriptor sets- to update uniform data. */
-        vkCmdBindDescriptorSets(this->commandBuffers[i], 
-            VK_PIPELINE_BIND_POINT_GRAPHICS, 
-            this->pipelineLayout, 
-            0, 
-            1, 
-            &descriptorSets.scene[i], 
-            0, 
-            nullptr);
+            vkCmdBindPipeline(this->commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipelines.offscreen);
 
-        /* Draw command by using indexes of vertices. */
-        vkCmdDrawIndexed(this->commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+            VkViewport viewport {};
+            viewport.width  = this->offscreenPass.width;
+            viewport.height = this->offscreenPass.height;
+            viewport.minDepth = 0.f;
+            viewport.maxDepth = 1.f;
+            vkCmdSetViewport(this->commandBuffers[i], 0, 1, &viewport);
 
-        /* END RECORDING */
-        vkCmdEndRenderPass(this->commandBuffers[i]);
+            VkRect2D scissor {};
+            scissor.extent.height   = this->offscreenPass.height;
+            scissor.extent.width    = this->offscreenPass.width;
+            scissor.offset.x    = 0;
+            scissor.offset.y    = 0;
+            vkCmdSetScissor(this->commandBuffers[i], 0, 1, &scissor);
 
-        if( vkEndCommandBuffer( this->commandBuffers[i]) != VK_SUCCESS )
-            throw std::runtime_error("Failed to record command buffer! :( \n");
+            /* Set depth bias. Avoiding artifacts. */
+            vkCmdSetDepthBias(this->commandBuffers[i], 1.25f, 0, 1.75f);
+
+            vkCmdBindDescriptorSets(this->commandBuffers[i], 
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                this->pipelineLayouts.offscreen,
+                0,
+                1,
+                &this->descriptorSets.offscreen,
+                0,
+                nullptr
+            );
+
+            VkBuffer vertexBuffers[] = {this->vertexBuffer};
+            VkDeviceSize offsets[] = {0};
+            vkCmdBindVertexBuffers(this->commandBuffers[i], 0, 1, vertexBuffers, offsets);
+            vkCmdBindIndexBuffer(this->commandBuffers[i], this->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+            vkCmdDrawIndexed(this->commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+
+            vkCmdEndRenderPass(this->commandBuffers[i]);
+        }
+
+
+
+        /*
+            Second render pass: Generate scene with applied shadows by using generated previously shadow map.
+        */
+        {
+            VkRenderPassBeginInfo renderPassInfo = {};
+            renderPassInfo.sType    = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+            renderPassInfo.renderPass   = this->renderPass;
+            renderPassInfo.framebuffer  = this->swapChainFramebuffers[i];
+            
+            /* Define size of render area */
+            renderPassInfo.renderArea.offset    = {0,0};
+            renderPassInfo.renderArea.extent    = this->swapChainExtent;
+            
+           
+            clearValues[0].color = {0.f, 0.f, 0.f, 1.f};
+            clearValues[1].depthStencil = {1.f, 0}; 
+            renderPassInfo.clearValueCount  = static_cast<uint32_t>(clearValues.size());
+            renderPassInfo.pClearValues     = clearValues.data();
+            
+            /* RECORDING */
+            vkCmdBeginRenderPass(this->commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+            
+            vkCmdBindPipeline(this->commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphicsPipeline);
+
+            /* Binding vertex buffer */
+            VkBuffer vertexBuffers[] = {this->vertexBuffer};
+            VkDeviceSize offsets[] = {0};
+            vkCmdBindVertexBuffers(this->commandBuffers[i], 0, 1, vertexBuffers, offsets);
+
+            /* Binding index buffer */
+            vkCmdBindIndexBuffer(this->commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+            /* Bind descriptor sets- to update uniform data. */
+            vkCmdBindDescriptorSets(this->commandBuffers[i], 
+                VK_PIPELINE_BIND_POINT_GRAPHICS, 
+                this->pipelineLayout, 
+                0, 
+                1, 
+                &descriptorSets.scene[i], 
+                0, 
+                nullptr);
+
+            /* Draw command by using indexes of vertices. */
+            vkCmdDrawIndexed(this->commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+
+            /* END RECORDING */
+            vkCmdEndRenderPass(this->commandBuffers[i]);
+
+            if( vkEndCommandBuffer( this->commandBuffers[i]) != VK_SUCCESS )
+                throw std::runtime_error("Failed to record command buffer! :( \n");
+        }
     }
 }
 
@@ -1401,8 +1462,6 @@ QueueFamilyIndices Simulation::findQueueFamilies(VkPhysicalDevice device)
 
     std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
-    
 
     int i = 0;
     for (const auto& queueFamily : queueFamilies) 
@@ -1742,16 +1801,19 @@ void Simulation::updateUniformBuffer(uint32_t currentImage)
     ubo.model   = glm::mat4(1.f);
     ubo.view    = this->cam01.getViewMatrix();
     ubo.proj    = glm::perspective(glm::radians(45.f),
-                        this->swapChainExtent.width / (float) this->swapChainExtent.height,
+                        this->swapChainExtent.width / static_cast<float>(this->swapChainExtent.height),
                         0.1f,
                         20.f);
     /* GLM was originally designed for OpenGL, it is important to revert scaling factor of Y axis. */
     ubo.proj[1][1] *= -1;
 
-    ubo.cameraPos       = this->cam01.getPosition();
+    ubo.cameraPos   = this->cam01.getPosition();
 
-    ubo.depthBiasMVP    = this->uboOffscreenVS.depthMVP;
-    ubo.lightPos        = this->lightPos;
+    ubo.DepthModel  = this->uboOffscreenVS.model;
+    ubo.DepthView   = this->uboOffscreenVS.view;
+    ubo.DepthProj   = this->uboOffscreenVS.proj;
+
+    ubo.lightPos    = this->lightPos;
 
     ubo.ambient     = glm::vec3(0.1f);
     ubo.diffuse     = glm::vec3(1.f, 1.f, 1.f);
@@ -1772,11 +1834,15 @@ void Simulation::updateUniformBuffer(uint32_t currentImage)
 void Simulation::updateOffscreenBuffer()
 {
     // Matrix from light's point of view
-    glm::mat4 depthProjectionMatrix = glm::perspective(glm::radians(lightFOV), 1.0f, 0.1f, 20.f);
-    glm::mat4 depthViewMatrix = glm::lookAt(lightPos, glm::vec3(0.0f, 0.f, 0.f), glm::vec3(0, 1, 0));
-    glm::mat4 depthModelMatrix = glm::mat4(1.0f);
-
-    uboOffscreenVS.depthMVP = depthProjectionMatrix * depthViewMatrix * depthModelMatrix;
+    this->uboOffscreenVS.proj = glm::perspective(glm::radians(lightFOV), 
+        this->swapChainExtent.width / static_cast<float>(this->swapChainExtent.height), 
+        0.1f,
+        20.f
+    );
+    /* GLM was originally designed for OpenGL, it is important to revert scaling factor of Y axis. */
+    this->uboOffscreenVS.proj[1][1] *= -1;
+    this->uboOffscreenVS.view = this->cam01.getViewMatrix(); //glm::lookAt(lightPos, glm::vec3(0.0f, 0.f, 0.f), glm::vec3(0, 1, 0));
+    this->uboOffscreenVS.model = glm::mat4(1.0f);
     
     vkMapMemory( this->device,
         this->OffscreenBuffer.memory,
@@ -1784,7 +1850,7 @@ void Simulation::updateOffscreenBuffer()
         VK_WHOLE_SIZE,
         0, 
         &this->OffscreenBuffer.mapped);
-    memcpy(OffscreenBuffer.mapped, &uboOffscreenVS, sizeof(uboOffscreenVS));
+    memcpy(OffscreenBuffer.mapped, &this->uboOffscreenVS, sizeof(UBOOffscreenVS));
     vkUnmapMemory(this->device, this->OffscreenBuffer.memory);
 }
 

@@ -10,7 +10,11 @@ layout( binding=0 ) uniform UniformBufferObject {
 
     vec3 cameraPos;
 
-    mat4 depthBiasMVP;
+    /* Model-View-Projection matrix from lights POV */
+    mat4 DepthModel;
+    mat4 DepthView;
+    mat4 DepthProj;
+
     vec3 lightPos;
 
     /* Ambient/Diffuse/Specular Lightning */
@@ -46,6 +50,7 @@ layout( location = 0 ) out struct VS_OUT {
 void main() 
 {
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
+    //gl_Position = ubo.DepthProj * ubo.DepthView * ubo.DepthModel * vec4(inPosition, 1.0);
 
     vs_out.fragColor       = inColor;
     vs_out.fragTexCoord    = inTexCoord;

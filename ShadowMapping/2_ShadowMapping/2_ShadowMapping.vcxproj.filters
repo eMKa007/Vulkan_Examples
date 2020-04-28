@@ -43,5 +43,11 @@
     <None Include="shaders\shader.vert">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="shaders\offscreen.frag">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shaders\offscreen.vert">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
