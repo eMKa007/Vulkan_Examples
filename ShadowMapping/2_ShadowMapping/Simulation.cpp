@@ -1090,7 +1090,7 @@ void Simulation::createIndexBuffer()
 
 void Simulation::createUniformBuffers()
 {
-    VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+    VkDeviceSize bufferSize = sizeof(this->uboBufferObj);
 
     /* Resize array of buffers to hold buffer for every image in swapchain */
     this->uniformBuffers.resize(this->swapChainImages.size());
@@ -1797,27 +1797,21 @@ void Simulation::updateDT()
 void Simulation::updateUniformBuffer(uint32_t currentImage)
 {
     /* Update variables inside uniform buffer */
-    UniformBufferObject ubo = {};
-    ubo.model   = glm::mat4(1.f);
-    ubo.view    = this->cam01.getViewMatrix();
-    ubo.proj    = glm::perspective(glm::radians(45.f),
+    glm::mat4 modelMat  = glm::mat4(1.f);
+    glm::mat4 viewMat   = this->cam01.getViewMatrix();
+    glm::mat4 projMat   = glm::perspective(glm::radians(lightFOV),
                         this->swapChainExtent.width / static_cast<float>(this->swapChainExtent.height),
                         0.1f,
                         20.f);
     /* GLM was originally designed for OpenGL, it is important to revert scaling factor of Y axis. */
-    ubo.proj[1][1] *= -1;
+    projMat[1][1] *= -1;
 
-    ubo.cameraPos   = this->cam01.getPosition();
+    this->uboBufferObj.modelMat     = modelMat;
+    this->uboBufferObj.viewProjMat  = projMat * viewMat;
 
-    ubo.DepthModel  = this->uboOffscreenVS.model;
-    ubo.DepthView   = this->uboOffscreenVS.view;
-    ubo.DepthProj   = this->uboOffscreenVS.proj;
-
-    ubo.lightPos    = this->lightPos;
-
-    ubo.ambient     = glm::vec3(0.1f);
-    ubo.diffuse     = glm::vec3(1.f, 1.f, 1.f);
-    ubo.specular    = glm::vec3(1.f, 1.f, 1.f);
+    this->uboBufferObj.cameraPos    = glm::vec4(this->cam01.getPosition(), 1.f);
+    this->uboBufferObj.DepthMVP     = this->uboOffscreenVS.proj * this->uboOffscreenVS.view * this->uboOffscreenVS.model;
+    this->uboBufferObj.lightPos     = glm::vec4(this->lightPos, 1.f);
 
     /* With providing this information, we can now map memory of the uniform buffer. */
     void* data;
@@ -1827,71 +1821,86 @@ void Simulation::updateUniformBuffer(uint32_t currentImage)
         VK_WHOLE_SIZE,
         0,
         &data );
-    memcpy(data, &ubo, sizeof(ubo));
+    memcpy(data, &this->uboBufferObj, sizeof(this->uboBufferObj));
     vkUnmapMemory(this->device, this->uniformBuffersMemory[currentImage]);
 }
 
 void Simulation::updateOffscreenBuffer()
 {
     // Matrix from light's point of view
-    this->uboOffscreenVS.proj = glm::perspective(glm::radians(lightFOV), 
-        this->swapChainExtent.width / static_cast<float>(this->swapChainExtent.height), 
-        0.1f,
-        20.f
-    );
+    this->uboOffscreenVS.proj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 20.f);
+
     /* GLM was originally designed for OpenGL, it is important to revert scaling factor of Y axis. */
     this->uboOffscreenVS.proj[1][1] *= -1;
-    this->uboOffscreenVS.view = this->cam01.getViewMatrix(); //glm::lookAt(lightPos, glm::vec3(0.0f, 0.f, 0.f), glm::vec3(0, 1, 0));
+    this->uboOffscreenVS.view = glm::lookAt(lightPos, glm::vec3(0.0f, 0.f, 0.f), glm::vec3(0, 1, 0));
     this->uboOffscreenVS.model = glm::mat4(1.0f);
-    
+
     vkMapMemory( this->device,
         this->OffscreenBuffer.memory,
         0,
         VK_WHOLE_SIZE,
         0, 
         &this->OffscreenBuffer.mapped);
-    memcpy(OffscreenBuffer.mapped, &this->uboOffscreenVS, sizeof(UBOOffscreenVS));
+    memcpy(OffscreenBuffer.mapped, &this->uboOffscreenVS, sizeof(uboOffscreenVS));
     vkUnmapMemory(this->device, this->OffscreenBuffer.memory);
 }
 
 void Simulation::updateKeyboardInput()
 {
     // Application
-	if( glfwGetKey( this->window, GLFW_KEY_ESCAPE ) == GLFW_PRESS )
-	{
-		glfwSetWindowShouldClose(this->window, GLFW_TRUE);
-	}
+    if( glfwGetKey( this->window, GLFW_KEY_ESCAPE ) == GLFW_PRESS )
+    {
+        glfwSetWindowShouldClose(this->window, GLFW_TRUE);
+    }
 
-	// Camera
-	if( glfwGetKey( this->window, GLFW_KEY_W ) == GLFW_PRESS )
-	{
-		this->cam01.move(this->dt, FORWARD);
-	}
+    // Camera
+    if( glfwGetKey( this->window, GLFW_KEY_W ) == GLFW_PRESS )
+    {
+        this->cam01.move(this->dt, FORWARD);
+    }
 
-	if( glfwGetKey( this->window, GLFW_KEY_S ) == GLFW_PRESS )
-	{
-		this->cam01.move(this->dt, BACKWARD);
-	}
+    if( glfwGetKey( this->window, GLFW_KEY_S ) == GLFW_PRESS )
+    {
+        this->cam01.move(this->dt, BACKWARD);
+    }
 
-	if( glfwGetKey( this->window, GLFW_KEY_A ) == GLFW_PRESS )
-	{
-		this->cam01.move(this->dt, LEFT);
-	}
+    if( glfwGetKey( this->window, GLFW_KEY_A ) == GLFW_PRESS )
+    {
+        this->cam01.move(this->dt, LEFT);
+    }
 
-	if( glfwGetKey( this->window, GLFW_KEY_D ) == GLFW_PRESS )
-	{
-		this->cam01.move(this->dt, RIGTH);
-	}
+    if( glfwGetKey( this->window, GLFW_KEY_D ) == GLFW_PRESS )
+    {
+        this->cam01.move(this->dt, RIGTH);
+    }
 
-	if( glfwGetKey( this->window, GLFW_KEY_SPACE ) == GLFW_PRESS )
-	{
-		this->cam01.move(this->dt, UPWARD);
-	}
+    if( glfwGetKey( this->window, GLFW_KEY_SPACE ) == GLFW_PRESS )
+    {
+        this->cam01.move(this->dt, UPWARD);
+    }
 
-	if( glfwGetKey( this->window, GLFW_KEY_C ) == GLFW_PRESS )
-	{
-		this->cam01.move(this->dt, DOWNWARD);
-	}
+    if( glfwGetKey( this->window, GLFW_KEY_C ) == GLFW_PRESS )
+    {
+        this->cam01.move(this->dt, DOWNWARD);
+    }
+
+
+
+    if( glfwGetKey( this->window, GLFW_KEY_UP ) == GLFW_PRESS )
+    {
+        this->lightPos.x += 0.1f;
+    }
+
+    if( glfwGetKey( this->window, GLFW_KEY_DOWN ) == GLFW_PRESS )
+    {
+        this->lightPos.y -= 0.1f;
+    }
+
+    if( glfwGetKey( this->window, GLFW_KEY_LEFT ) == GLFW_PRESS )
+    {
+        this->lightPos.z += 0.1f;
+    }
+
 }
 
 void Simulation::updateMouseInput()

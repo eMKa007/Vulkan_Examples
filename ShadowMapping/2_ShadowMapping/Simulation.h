@@ -238,7 +238,7 @@ private:
     VkSampler       textureSampler;
 
     /* Light position and field of view. */
-    glm::vec3 lightPos = glm::vec3(10.f, 10.f, 10.f);
+    glm::vec3 lightPos = glm::vec3(5.f, 5.f, 5.f);
     float lightFOV = 45.0f;
 
 #ifdef NDEBUG
@@ -372,6 +372,20 @@ private:
 
     void createOffscreenFramebuffer();
     void prepareOffscreenRenderPass();
+
+    /* Camera setup - matrices - to be moved in separate class */
+    struct {
+        glm::mat4 modelMat;
+        glm::mat4 viewProjMat;
+
+        /* Camera position */
+        glm::vec4 cameraPos;
+        
+        /* Model-View-Projection matrix from lights POV */
+        glm::mat4 DepthMVP;
+
+        glm::vec4 lightPos;
+    } uboBufferObj;
 };
 
 static std::vector<char> readFile( const std::string& filename )
@@ -396,24 +410,3 @@ static std::vector<char> readFile( const std::string& filename )
     return buffer;
 }
 
-/* Camera setup - matrices - to be moved in separate class */
-struct UniformBufferObject {
-    glm::mat4 model;
-    glm::mat4 view;
-    glm::mat4 proj;
-
-    /* Camera position */
-    glm::vec3 cameraPos;
-    
-    /* Model-View-Projection matrix from lights POV */
-    glm::mat4 DepthModel;
-    glm::mat4 DepthView;
-    glm::mat4 DepthProj;
-
-    glm::vec3 lightPos;
-
-    /* Ambient/Diffuse/Specular Lightning */
-    glm::vec3 ambient;
-    glm::vec3 diffuse;
-    glm::vec3 specular;
-};
