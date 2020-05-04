@@ -161,13 +161,17 @@ private:
     VkDevice            device;
 
     /* Queues */
-    VkQueue graphicsQueue;
-    VkQueue presentQueue;
-
+    struct Queues {
+        VkQueue graphics_queue;
+        VkQueue present_queue;
+    } _queues;
+    
     /* Swap chain */
-    VkSwapchainKHR  swapChain;
-    VkFormat        swapChainImageFormat;
-    VkExtent2D      swapChainExtent;
+    struct Swapchain {
+        VkSwapchainKHR  swap_chain;
+        VkFormat        swap_chain_image_format;
+        VkExtent2D      swap_chain_extent;
+    } _swap_chain;
 
     /* Swap chain image handles */
     std::vector<VkImage> swapChainImages;
@@ -203,49 +207,50 @@ private:
     } _scene_pass;
 
     /* Pipeline Layouts */
-    VkRenderPass        renderPass;
-    VkPipelineLayout    pipelineLayout;
+    VkPipelineLayout    _pipeline_layout;
 
     /* Main Graphics Pipeline */
-    VkPipeline graphicsPipeline;
+    VkPipeline _graphics_pipeline;
 
     /* Framebuffers */
-    std::vector<VkFramebuffer> swapChainFramebuffers;
+    std::vector<VkFramebuffer> _swapchain_framebuffers;
 
     /* Command Pool- to store commands */
-    VkCommandPool commandPool;
+    VkCommandPool _command_pool;
 
     /* Command Buffers- to record commands */
-    std::vector<VkCommandBuffer> commandBuffers;
-
-    /* Semaphore- signals that an image has been acquired and is ready for rendering. */
-    std::vector<VkSemaphore> imageAvailableSemaphores;
-    
-    /* Semaphore- signals that rendering has finished and presentation can happen. */
-    std::vector<VkSemaphore> renderFinishedSemaphores;
+    std::vector<VkCommandBuffer> _command_buffers;
 
     /* Current used frame */
-    size_t currentFrame = 0;
+    size_t _currentFrame = 0;
 
-    /* CPU-GPU synchronization fences */
-    std::vector<VkFence> inFlightFences;
-    std::vector<VkFence> imagesInFlight;
+    struct Sync_Objects {
+        /* Semaphore- signals that an image has been acquired and is ready for rendering. */
+        std::vector<VkSemaphore> _image_available_semaphores;
+    
+        /* Semaphore- signals that rendering has finished and presentation can happen. */
+        std::vector<VkSemaphore> _render_finished_semaphores;
+
+        /* CPU-GPU synchronization fences */
+        std::vector<VkFence> inFlightFences;
+        std::vector<VkFence> imagesInFlight;
+    } _sync_obj;
 
     /* Vertex and Indices Variables */
-    std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
+    std::vector<Vertex> _vertices;
+    std::vector<uint32_t> _indices;
 
-    VkBuffer        vertexBuffer;
-    VkDeviceMemory  vertexBufferMemory;
-    VkBuffer        indexBuffer;               /* Index data for corresponding vertex buffer. */
-    VkDeviceMemory  indexBufferMemory;
+    VkBuffer        _vertex_buffer;
+    VkDeviceMemory  _vertex_buffer_memory;
+    VkBuffer        _index_buffer;               /* Index data for corresponding vertex buffer. */
+    VkDeviceMemory  _index_buffer_memory;
 
     /* Uniform Buffers - they'll be update after every frame so every image in swapchain will have own uniform buffer. */
     std::vector<VkBuffer>       uniformBuffers;
     std::vector<VkDeviceMemory> uniformBuffersMemory;
 
     /* Descriptor pool to hold descriptors set. */
-    VkDescriptorPool descriptorPool;
+    VkDescriptorPool _descriptor_pool;
 
     struct {
         VkBuffer                buffer = VK_NULL_HANDLE;
@@ -258,26 +263,26 @@ private:
         VkBufferUsageFlags      usageFlags;
 
         VkMemoryPropertyFlags   memoryPropertyFlags;
-    } OffscreenBuffer;
+    } _offscreen_buffer;
 
     struct UBOOffscreenVS {
         glm::mat4 model;
         glm::mat4 view;
         glm::mat4 proj;
-    } uboOffscreenVS;
+    } _uboOffscreenVS;
 
     struct {
         VkPipelineLayout offscreen;
-    } pipelineLayouts;
+    } _pipeline_layouts;
 
     struct {
         VkPipeline offscreen;
-    } pipelines;
+    } _pipelines;
 
     struct {
         VkDescriptorSet offscreen;
         std::vector<VkDescriptorSet>    scene;
-    } descriptorSets;
+    } _descriptor_sets;
 
 
     /* Light position and field of view. */
@@ -367,7 +372,6 @@ private:
     void createOffscreenFramebuffer();
     void prepareOffscreenRenderPass();
 
-    /* Camera setup - matrices - to be moved in separate class */
     struct {
         glm::mat4 modelMat;
         glm::mat4 viewProjMat;

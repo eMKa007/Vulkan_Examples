@@ -27,10 +27,10 @@ Simulation::Simulation( unsigned int windowWidth, unsigned int windowHeight, std
     validationLayers.push_back("VK_LAYER_KHRONOS_validation");
     deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
-    this->initGLFW();
-    this->initWindow();
+    initGLFW();
+    initWindow();
 
-    this->initVulkan();
+    initVulkan();
 }
 
 
@@ -38,33 +38,33 @@ Simulation::~Simulation() { }
 
 void Simulation::run()
 {
-    this->mainLoop();
-    this->cleanup();
+    mainLoop();
+    cleanup();
 }
 
 void Simulation::initVulkan()
 {
-    this->createInstance();
-    this->createSurface();
-    this->pickPhysicalDevice();
-    this->createLogicalDevice();
-    this->createSwapChain();
-    this->createImageViews();
-    this->createRenderPass();
-    this->createDescriptorSetLayout();
-    this->createGraphicsPipeline();
-    this->createDepthResources();
-    this->createFramebuffers();
-    this->createCommandPool();
-    this->createTextureSamper();
-    this->loadModel();
-    this->createVertexBuffer();
-    this->createIndexBuffer();
-    this->createUniformBuffers();
-    this->createDescriptorPool();
-    this->createDescriptorSets();
-    this->createCommandBuffers();
-    this->createSyncObjects();
+    createInstance();
+    createSurface();
+    pickPhysicalDevice();
+    createLogicalDevice();
+    createSwapChain();
+    createImageViews();
+    createRenderPass();
+    createDescriptorSetLayout();
+    createGraphicsPipeline();
+    createDepthResources();
+    createFramebuffers();
+    createCommandPool();
+    createTextureSamper();
+    loadModel();
+    createVertexBuffer();
+    createIndexBuffer();
+    createUniformBuffers();
+    createDescriptorPool();
+    createDescriptorSets();
+    createCommandBuffers();
+    createSyncObjects();
 }
 
 void Simulation::createInstance()
@@ -94,15 +94,15 @@ void Simulation::createInstance()
 
     if( enableValidationLayers )
     {
-        createInfo.enabledLayerCount = static_cast<uint32_t>(this->validationLayers.size());
-        createInfo.ppEnabledLayerNames = this->validationLayers.data();
+        createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+        createInfo.ppEnabledLayerNames = validationLayers.data();
     }
     else
     {
         createInfo.enabledLayerCount = 0;
     }
 
-    VkResult result = vkCreateInstance(&createInfo, nullptr, &this->instance);
+    VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
 
     if (result != VK_SUCCESS) 
         throw std::runtime_error("failed to create instance!");
@@ -111,29 +111,29 @@ void Simulation::createInstance()
 void Simulation::pickPhysicalDevice()
 {
     uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(this->instance, &deviceCount, nullptr);
+    vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 
     if( deviceCount == 0 )
         throw std::runtime_error("Failed to find GPUs with Vulkan support!");
 
     std::vector<VkPhysicalDevice> devices(deviceCount);
-    vkEnumeratePhysicalDevices(this->instance, &deviceCount, devices.data());
+    vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
     for (const auto& element : devices)
     {
         if( isDeviceSuitable(element) )
-        {    this->physicalDevice = element;
+        {    physicalDevice = element;
             break;
         }
     }
 
-    if( this->physicalDevice == VK_NULL_HANDLE )
+    if( physicalDevice == VK_NULL_HANDLE )
         throw std::runtime_error("Failed to find a suitable GPU!");
 }
 
 void Simulation::createLogicalDevice()
 {
-    QueueFamilyIndices indices = findQueueFamilies(this->physicalDevice);
+    QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
@@ -160,26 +160,26 @@ void Simulation::createLogicalDevice()
     createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
     createInfo.pEnabledFeatures = &deviceFeatures;
 
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(this->deviceExtensions.size());
-    createInfo.ppEnabledExtensionNames = this->deviceExtensions.data();
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
+    createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
     if( enableValidationLayers )
     {
-        createInfo.enabledLayerCount = static_cast<uint32_t>(this->validationLayers.size());
-        createInfo.ppEnabledLayerNames = this->validationLayers.data();
+        createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+        createInfo.ppEnabledLayerNames = validationLayers.data();
     }
     else
     {
         createInfo.enabledLayerCount = 0;
     }
 
-    if( vkCreateDevice(this->physicalDevice, &createInfo, nullptr, &this->device) != VK_SUCCESS )
+    if( vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS )
     {
         throw new std::runtime_error("Failed to create logical device! ");
     }
 
-    vkGetDeviceQueue(this->device, indices.graphicsFamily.value(), 0, &this->graphicsQueue);
-    vkGetDeviceQueue(this->device, indices.presentFamily.value(), 0, &this->presentQueue);
+    vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &_queues.graphics_queue);
+    vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &_queues.present_queue);
 }
 
 bool Simulation::checkDeviceExtensionSupport(VkPhysicalDevice device)
@@ -203,7 +203,7 @@ bool Simulation::checkDeviceExtensionSupport(VkPhysicalDevice device)
 
 void Simulation::createSwapChain()
 {
-    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(this->physicalDevice);
+    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice);
 
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat( swapChainSupport.formats );
     VkPresentModeKHR presentMode = chooseSwapPresentMode( swapChainSupport.presentModes );
@@ -217,7 +217,7 @@ void Simulation::createSwapChain()
 
     VkSwapchainCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface = this->surface;
+    createInfo.surface = surface;
 
     createInfo.minImageCount = imageCount;
     createInfo.imageFormat = surfaceFormat.format;
@@ -230,7 +230,7 @@ void Simulation::createSwapChain()
      * We'll be drawing on the images in the swap chain 
      * from the graphics queue and then submitting them on the presentation queue. 
      */
-    QueueFamilyIndices indices = findQueueFamilies(this->physicalDevice);
+    QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
     uint32_t queueFamilyIndices[] { indices.graphicsFamily.value(), indices.presentFamily.value() };
 
     if( indices.graphicsFamily != indices.presentFamily)
@@ -267,29 +267,29 @@ void Simulation::createSwapChain()
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    if( vkCreateSwapchainKHR(this->device, &createInfo, nullptr, &this->swapChain) != VK_SUCCESS )
+    if( vkCreateSwapchainKHR(device, &createInfo, nullptr, &_swap_chain.swap_chain) != VK_SUCCESS )
     {
         throw new std::runtime_error("Failed to create swap chain!");
     }
 
-    vkGetSwapchainImagesKHR(this->device, this->swapChain, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(device, _swap_chain.swap_chain, &imageCount, nullptr);
     swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(this->device, this->swapChain, &imageCount, this->swapChainImages.data());
+    vkGetSwapchainImagesKHR(device, _swap_chain.swap_chain, &imageCount, swapChainImages.data());
 
-    this->swapChainImageFormat = surfaceFormat.format;
-    this->swapChainExtent = extent;
+    _swap_chain.swap_chain_image_format = surfaceFormat.format;
+    _swap_chain.swap_chain_extent = extent;
 }
 
 void Simulation::createImageViews()
 {
-    this->swapChainImageViews.resize(swapChainImages.size());
+    swapChainImageViews.resize(swapChainImages.size());
 
     /*
      * Loop through all images to create image view for every of them.
      */
     for ( unsigned int i = 0; i < swapChainImages.size(); i++)
     {
-        swapChainImageViews[i] = createImageView(swapChainImages[i], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
+        swapChainImageViews[i] = createImageView(swapChainImages[i], _swap_chain.swap_chain_image_format, VK_IMAGE_ASPECT_COLOR_BIT);
     }
 }
 
@@ -297,7 +297,7 @@ void Simulation::createRenderPass()
 {
     /* COLOR ATTACHMENT */
     VkAttachmentDescription colorAttachment {};
-    colorAttachment.format  = this->swapChainImageFormat;
+    colorAttachment.format  = _swap_chain.swap_chain_image_format;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;  // Clear data in attachment before rendering.
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // Store rendered contents in memory, so it can be read later.
@@ -312,7 +312,7 @@ void Simulation::createRenderPass()
 
     /* DEPTH ATTACHMENT */
     VkAttachmentDescription depthAttachment = {};
-    depthAttachment.format  = DEPTH_FORMAT;//this->findDepthFormat();
+    depthAttachment.format  = DEPTH_FORMAT;//findDepthFormat();
     depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     depthAttachment.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;      /* Clear data in attachment before rendering. */
     depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE; /* Do not store depth data for now. */
@@ -350,13 +350,13 @@ void Simulation::createRenderPass()
     renderPassInfo.dependencyCount  = 1;
     renderPassInfo.pDependencies    = &dependency;
 
-    if( vkCreateRenderPass(this->device, &renderPassInfo, nullptr, &_scene_pass.render_pass) != VK_SUCCESS )
+    if( vkCreateRenderPass(device, &renderPassInfo, nullptr, &_scene_pass.render_pass) != VK_SUCCESS )
     {
         throw std::runtime_error("Failed to create render pass. :( \n");
     }
 
     /* Offscreen render pass */
-    this->prepareOffscreenRenderPass();
+    prepareOffscreenRenderPass();
 }
 
 void Simulation::createDescriptorSetLayout()
@@ -384,7 +384,7 @@ void Simulation::createDescriptorSetLayout()
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.pBindings    = bindings.data();
 
-    if( vkCreateDescriptorSetLayout(this->device, &layoutInfo, nullptr, &this->descriptorSetLayout) != VK_SUCCESS )
+    if( vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS )
         throw std::runtime_error("Failed to create Descriptor Set Layout. :( \n");
 }
 
@@ -432,14 +432,14 @@ void Simulation::createGraphicsPipeline()
     VkViewport viewport = {};
     viewport.x     = 0.0f;
     viewport.y     = 0.0f;
-    viewport.width    = static_cast<float>(swapChainExtent.width);
-    viewport.height   = static_cast<float>(swapChainExtent.height);
+    viewport.width    = static_cast<float>(_swap_chain.swap_chain_extent.width);
+    viewport.height   = static_cast<float>(_swap_chain.swap_chain_extent.height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
     VkRect2D scissor  = {};
     scissor.offset    = {0, 0};
-    scissor.extent    = swapChainExtent;
+    scissor.extent    = _swap_chain.swap_chain_extent;
 
     //Combine viewport and scissor into viewport state
     VkPipelineViewportStateCreateInfo viewportState = {};
@@ -539,15 +539,15 @@ void Simulation::createGraphicsPipeline()
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount         = 1;                          // One layout - Uniform Buffer Object bound to 0 position.
-    pipelineLayoutInfo.pSetLayouts            = &this->descriptorSetLayout; // Pointer to descriptor set layout which bound all of the descriptors.
+    pipelineLayoutInfo.pSetLayouts            = &descriptorSetLayout; // Pointer to descriptor set layout which bound all of the descriptors.
     pipelineLayoutInfo.pushConstantRangeCount = 0;        // Optional
     pipelineLayoutInfo.pPushConstantRanges    = nullptr;  // Optional
    
-    if( vkCreatePipelineLayout(this->device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
+    if( vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &_pipeline_layout) != VK_SUCCESS)
         throw std::runtime_error("Failed to create pipeline layout! :(\n");
 
     /* Create pipeline layout for offscreen render pass. */
-    if( vkCreatePipelineLayout(this->device, &pipelineLayoutInfo, nullptr, &pipelineLayouts.offscreen) != VK_SUCCESS)
+    if( vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &_pipeline_layouts.offscreen) != VK_SUCCESS)
         throw std::runtime_error("Failed to create pipeline layout! :(\n");
     
     /* Combine structures to create pipeline */
@@ -564,7 +564,7 @@ void Simulation::createGraphicsPipeline()
     pipelineInfo.pColorBlendState       = &colorBlending;
     pipelineInfo.pDynamicState          = nullptr;
     
-    pipelineInfo.layout                 = this->pipelineLayout;
+    pipelineInfo.layout                 = _pipeline_layout;
     pipelineInfo.renderPass             = _scene_pass.render_pass;
     
     pipelineInfo.subpass                = 0;    // Index of the subpass where this pipeline will be used.
@@ -572,7 +572,7 @@ void Simulation::createGraphicsPipeline()
     pipelineInfo.basePipelineHandle     = VK_NULL_HANDLE;   // Optional
     pipelineInfo.basePipelineIndex      = -1;               // Optional
 
-    if( vkCreateGraphicsPipelines(this->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &this->graphicsPipeline) != VK_SUCCESS)
+    if( vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_graphics_pipeline) != VK_SUCCESS)
         throw std::runtime_error("Failed to create Graphics Pipeline! :( \n");
 
     /* Offscreen Pipeline - vertex shader only */
@@ -590,22 +590,22 @@ void Simulation::createGraphicsPipeline()
     // Add depth bias to dynamic state, so we can change it at runtime
     pipelineInfo.pDynamicState = &dynamicState;
     
-    pipelineInfo.layout     = pipelineLayouts.offscreen;
+    pipelineInfo.layout     = _pipeline_layouts.offscreen;
     pipelineInfo.renderPass = _offscreen_pass.renderPass;
 
-    if( vkCreateGraphicsPipelines(this->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &this->pipelines.offscreen) != VK_SUCCESS)
+    if( vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_pipelines.offscreen) != VK_SUCCESS)
         throw std::runtime_error("Failed to create Graphics Pipeline- offscreen render pass! :( \n");
 
     /* Tidy up unused objects */
-    vkDestroyShaderModule(this->device, fragShaderModule, nullptr);
-    vkDestroyShaderModule(this->device, vertShaderModule, nullptr);
+    vkDestroyShaderModule(device, fragShaderModule, nullptr);
+    vkDestroyShaderModule(device, vertShaderModule, nullptr);
 
-    vkDestroyShaderModule(this->device, vertShaderStageInfo.module, nullptr);
+    vkDestroyShaderModule(device, vertShaderStageInfo.module, nullptr);
 }
 
 void Simulation::createFramebuffers()
 {
-    swapChainFramebuffers.resize(swapChainImages.size());
+    _swapchain_framebuffers.resize(swapChainImages.size());
 
     for(size_t i=0; i< swapChainImageViews.size(); i++)
     {
@@ -616,15 +616,15 @@ void Simulation::createFramebuffers()
         framebufferInfo.renderPass  = _scene_pass.render_pass;
         framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
         framebufferInfo.pAttachments    = attachments.data();
-        framebufferInfo.width           = swapChainExtent.width;
-        framebufferInfo.height          = swapChainExtent.height;
+        framebufferInfo.width           = _swap_chain.swap_chain_extent.width;
+        framebufferInfo.height          = _swap_chain.swap_chain_extent.height;
         framebufferInfo.layers          = 1;
  
-        if(vkCreateFramebuffer(this->device, &framebufferInfo, nullptr, &this->swapChainFramebuffers[i]) != VK_SUCCESS)
+        if(vkCreateFramebuffer(device, &framebufferInfo, nullptr, &_swapchain_framebuffers[i]) != VK_SUCCESS)
             throw std::runtime_error("Failed to create framebuffer :( \n");
     }
 
-    this->createOffscreenFramebuffer();
+    createOffscreenFramebuffer();
 }
 
 void Simulation::createOffscreenFramebuffer()
@@ -634,12 +634,12 @@ void Simulation::createOffscreenFramebuffer()
     framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebufferCreateInfo.renderPass        = _offscreen_pass.renderPass;
     framebufferCreateInfo.attachmentCount   = 1;
-    framebufferCreateInfo.pAttachments      = &this->_offscreen_pass.depth.image_view;
+    framebufferCreateInfo.pAttachments      = &_offscreen_pass.depth.image_view;
     framebufferCreateInfo.width             = _windowWidth;
     framebufferCreateInfo.height            = _windowHeight;
     framebufferCreateInfo.layers            = 1;
 
-    if(vkCreateFramebuffer(this->device, &framebufferCreateInfo, nullptr, &this->_offscreen_pass.frameBuffer) != VK_SUCCESS)
+    if(vkCreateFramebuffer(device, &framebufferCreateInfo, nullptr, &_offscreen_pass.frameBuffer) != VK_SUCCESS)
         throw std::runtime_error("Failed to create offscreen framebuffer :( \n");
 }
 
@@ -693,20 +693,20 @@ void Simulation::prepareOffscreenRenderPass()
     renderPassCreateInfo.subpassCount       = 1;
     renderPassCreateInfo.pSubpasses         = &subpass;
 
-    if( vkCreateRenderPass(this->device, &renderPassCreateInfo, nullptr, &this->_offscreen_pass.renderPass) != VK_SUCCESS )
+    if( vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, &_offscreen_pass.renderPass) != VK_SUCCESS )
         throw std::runtime_error("Failed to create render pass. :( \n");
 }
 
 void Simulation::createCommandPool()
 {
-    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(this->physicalDevice);
+    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice);
 
     VkCommandPoolCreateInfo poolInfo = {};
     poolInfo.sType  = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.queueFamilyIndex   = queueFamilyIndices.graphicsFamily.value();    // Commands for drawing- graphics queue
     poolInfo.flags  = 0;
 
-    if( vkCreateCommandPool(this->device, &poolInfo, nullptr, &this->commandPool) != VK_SUCCESS )
+    if( vkCreateCommandPool(device, &poolInfo, nullptr, &_command_pool) != VK_SUCCESS )
         throw std::runtime_error("Failed to create command pool :( \n");
 }
 
@@ -745,7 +745,7 @@ void Simulation::createTextureSamper()
     depthSamplerInfo.maxLod      = 1.f;
     
     /* Image Sampler do not refer VkImage object anywhere. It is distinct object that provide interface to extract color from texture. */
-    if(vkCreateSampler(this->device, &depthSamplerInfo, nullptr, &this->_offscreen_pass.depthSampler) != VK_SUCCESS )
+    if(vkCreateSampler(device, &depthSamplerInfo, nullptr, &_offscreen_pass.depthSampler) != VK_SUCCESS )
         throw std::runtime_error("Failed to create offscreen texture sampler! :( \n");
 }
 
@@ -803,11 +803,11 @@ void Simulation::loadModel()
             /* Check if same vertex has been already read. */
             if( uniqueVertices.count(vertex) == 0 )
             {
-                uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
-                vertices.push_back(vertex);
+                uniqueVertices[vertex] = static_cast<uint32_t>(_vertices.size());
+                _vertices.push_back(vertex);
             }
 
-            indices.push_back(uniqueVertices[vertex]);
+            _indices.push_back(uniqueVertices[vertex]);
         }
     }
 
@@ -818,7 +818,7 @@ void Simulation::loadModel()
     float minY = (minElement.first.pos.y);
 
     /* Vertices count before floor insertion. */
-    int count = vertices.size();
+    int count = _vertices.size();
 
     /* Add floor vertices. */
     glm::vec3 floor_color   = {0.5f, 0.5f, 0.5f};
@@ -849,25 +849,25 @@ void Simulation::loadModel()
     v4.normal   = floor_normal;
     v4.texCoord = {0.f, 1.f};;
 
-    vertices.push_back(v1);
-    vertices.push_back(v2);
-    vertices.push_back(v3);
-    vertices.push_back(v4);
+    _vertices.push_back(v1);
+    _vertices.push_back(v2);
+    _vertices.push_back(v3);
+    _vertices.push_back(v4);
 
-    indices.push_back(count+0); /* v1 */
-    indices.push_back(count+1); /* v2 */
-    indices.push_back(count+2); /* v3 */
+    _indices.push_back(count+0); /* v1 */
+    _indices.push_back(count+1); /* v2 */
+    _indices.push_back(count+2); /* v3 */
 
-    indices.push_back(count+0); /* v1 */
-    indices.push_back(count+2); /* v3 */
-    indices.push_back(count+3); /* v4 */
+    _indices.push_back(count+0); /* v1 */
+    _indices.push_back(count+2); /* v3 */
+    _indices.push_back(count+3); /* v4 */
 }
 
 void Simulation::createDepthResources()
 {
     /* Create vkImage object with given properties */
-    this->createImage(this->swapChainExtent.width,
-            this->swapChainExtent.height,
+    createImage(_swap_chain.swap_chain_extent.width,
+            _swap_chain.swap_chain_extent.height,
             DEPTH_FORMAT,
             VK_IMAGE_TILING_OPTIMAL,
             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 
@@ -877,10 +877,10 @@ void Simulation::createDepthResources()
         );
     
     /* Crate Image view bound to previously created depth image */
-    _scene_pass.depth.image_view = this->createImageView(_scene_pass.depth.image, DEPTH_FORMAT, VK_IMAGE_ASPECT_DEPTH_BIT);
+    _scene_pass.depth.image_view = createImageView(_scene_pass.depth.image, DEPTH_FORMAT, VK_IMAGE_ASPECT_DEPTH_BIT);
 
     /* Create Image for depth map. Offscreen */
-    this->createImage(_windowWidth, 
+    createImage(_windowWidth, 
         _windowHeight, 
         DEPTH_FORMAT, 
         VK_IMAGE_TILING_OPTIMAL, 
@@ -891,7 +891,7 @@ void Simulation::createDepthResources()
     );
 
     /* Crate Image View for crated depth image. Offscreen */
-    this->_offscreen_pass.depth.image_view = this->createImageView(this->_offscreen_pass.depth.image,
+    _offscreen_pass.depth.image_view = createImageView(_offscreen_pass.depth.image,
         DEPTH_FORMAT,
         VK_IMAGE_ASPECT_DEPTH_BIT
     );
@@ -899,7 +899,7 @@ void Simulation::createDepthResources()
 
 void Simulation::createVertexBuffer()
 {
-    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+    VkDeviceSize bufferSize = sizeof(_vertices[0]) * _vertices.size();
 
     /* Temporary host buffer to copy data from CPU to GPU */
     VkBuffer stagingBuffer;
@@ -913,33 +913,33 @@ void Simulation::createVertexBuffer()
 
     /* Mapping staging buffer memory and filling it with vertex data. */
     void* data;
-    if( vkMapMemory(this->device, stagingBufferMemory, 0, bufferSize, 0, &data) != VK_SUCCESS )
+    if( vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data) != VK_SUCCESS )
         throw std::runtime_error("Failed to create staging buffer. :( \n");
     
     /* Copy vertices data to staging buffer */
-    memcpy(data, vertices.data(), (size_t)bufferSize);
+    memcpy(data, _vertices.data(), (size_t)bufferSize);
 
     /* Unmap previously mapped memory object as data was copied */
-    vkUnmapMemory(this->device, stagingBufferMemory);
+    vkUnmapMemory(device, stagingBufferMemory);
 
     /* Create Vertex Buffer on GPU */
     createBuffer(bufferSize, 
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        this->vertexBuffer,
-        this->vertexBufferMemory);
+        _vertex_buffer,
+        _vertex_buffer_memory);
 
     /* Copy data from staging buffer to high performance memory on GPU */
-    copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+    copyBuffer(stagingBuffer, _vertex_buffer, bufferSize);
 
     /* Clean up resources */
-    vkDestroyBuffer(this->device, stagingBuffer, nullptr);
-    vkFreeMemory(this->device, stagingBufferMemory, nullptr);
+    vkDestroyBuffer(device, stagingBuffer, nullptr);
+    vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
 void Simulation::createIndexBuffer()
 {
-    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+    VkDeviceSize bufferSize = sizeof(_indices[0]) * _indices.size();
     
     /* With additional staging buffer copy data to GPU memory. */
     VkBuffer stagingBuffer;
@@ -954,46 +954,46 @@ void Simulation::createIndexBuffer()
 
     /* Map memory to hold indices data. */
     void* data;
-    if(vkMapMemory(this->device, stagingBufferMemory, 0, bufferSize, 0, &data) != VK_SUCCESS )
+    if(vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data) != VK_SUCCESS )
         throw std::runtime_error("Failed to create indices staging buffer! :( \n");
     
     /* Copy data to mapped memory. */
-    memcpy(data, indices.data(), (size_t)bufferSize);
+    memcpy(data, _indices.data(), (size_t)bufferSize);
 
     /* Unmap memory to free resources. */
-    vkUnmapMemory(this->device, stagingBufferMemory);
+    vkUnmapMemory(device, stagingBufferMemory);
 
     /* Create buffer to hold indices data on GPU. */
     createBuffer(bufferSize,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        indexBuffer,
-        indexBufferMemory);
+        _index_buffer,
+        _index_buffer_memory);
 
     /* Copy data to GPU indices buffer */
-    copyBuffer(stagingBuffer, indexBuffer, bufferSize);
+    copyBuffer(stagingBuffer, _index_buffer, bufferSize);
 
     /* Free resources */
-    vkDestroyBuffer(this->device, stagingBuffer, nullptr);
-    vkFreeMemory(this->device, stagingBufferMemory, nullptr);
+    vkDestroyBuffer(device, stagingBuffer, nullptr);
+    vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
 void Simulation::createUniformBuffers()
 {
-    VkDeviceSize bufferSize = sizeof(this->uboBufferObj);
+    VkDeviceSize bufferSize = sizeof(uboBufferObj);
 
-    /* Resize array of buffers to hold buffer for every image in swapchain */
-    this->uniformBuffers.resize(this->swapChainImages.size());
-    this->uniformBuffersMemory.resize(this->swapChainImages.size());
+    /* Resize array of buffers to hold buffer for every image in _swap_chain.swap_chain */
+    uniformBuffers.resize(swapChainImages.size());
+    uniformBuffersMemory.resize(swapChainImages.size());
 
     /* Create Buffer for every of uniformBuffer array member */
-    for( size_t i = 0; i<this->swapChainImages.size(); i++)
+    for( size_t i = 0; i<swapChainImages.size(); i++)
     {
-        this->createBuffer(bufferSize,
+        createBuffer(bufferSize,
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            this->uniformBuffers[i],
-            this->uniformBuffersMemory[i]
+            uniformBuffers[i],
+            uniformBuffersMemory[i]
         );
     }
 
@@ -1002,39 +1002,39 @@ void Simulation::createUniformBuffers()
 
 
     /* Initialize uniform buffer object for offscreen render pass */
-    this->OffscreenBuffer.size          = sizeof(UBOOffscreenVS);
-    this->OffscreenBuffer.usageFlags    = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    this->OffscreenBuffer.memoryPropertyFlags   = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    _offscreen_buffer.size          = sizeof(UBOOffscreenVS);
+    _offscreen_buffer.usageFlags    = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    _offscreen_buffer.memoryPropertyFlags   = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     
     /* Specify memory desired type and size */
     VkBufferCreateInfo bufferInfo = {};
     bufferInfo.sType    = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size     = this->OffscreenBuffer.size;           /* Size of buffer in bytes */
-    bufferInfo.usage    = this->OffscreenBuffer.usageFlags;
+    bufferInfo.size     = _offscreen_buffer.size;           /* Size of buffer in bytes */
+    bufferInfo.usage    = _offscreen_buffer.usageFlags;
     bufferInfo.flags    = 0;                                    /* No additional parameters */
     bufferInfo.sharingMode  = VK_SHARING_MODE_EXCLUSIVE;
 
-    if(vkCreateBuffer(this->device, &bufferInfo, nullptr, &this->OffscreenBuffer.buffer) != VK_SUCCESS )
+    if(vkCreateBuffer(device, &bufferInfo, nullptr, &_offscreen_buffer.buffer) != VK_SUCCESS )
         throw std::runtime_error("Failed to create vertex buffer. :( \n");
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(this->device, this->OffscreenBuffer.buffer, &memRequirements);
+    vkGetBufferMemoryRequirements(device, _offscreen_buffer.buffer, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize    = memRequirements.size;
-    allocInfo.memoryTypeIndex   = this->findMemoryType(memRequirements.memoryTypeBits, this->OffscreenBuffer.memoryPropertyFlags); // Mapped memory always matches the contents of the allocated memory.
+    allocInfo.memoryTypeIndex   = findMemoryType(memRequirements.memoryTypeBits, _offscreen_buffer.memoryPropertyFlags); // Mapped memory always matches the contents of the allocated memory.
  
-    if(vkAllocateMemory(this->device, &allocInfo, nullptr, &this->OffscreenBuffer.memory))
+    if(vkAllocateMemory(device, &allocInfo, nullptr, &_offscreen_buffer.memory))
         throw std::runtime_error("Failed to allocate vertex buffer memory! :( \n");
 
     // Initialize a default descriptor that covers the whole buffer size
-    this->OffscreenBuffer.descriptor.offset     = 0;
-    this->OffscreenBuffer.descriptor.buffer     = this->OffscreenBuffer.buffer;
-    this->OffscreenBuffer.descriptor.range      = VK_WHOLE_SIZE; 
+    _offscreen_buffer.descriptor.offset     = 0;
+    _offscreen_buffer.descriptor.buffer     = _offscreen_buffer.buffer;
+    _offscreen_buffer.descriptor.range      = VK_WHOLE_SIZE; 
 
     /* Bind created memory to vertex buffer object */
-    vkBindBufferMemory(this->device, this->OffscreenBuffer.buffer, this->OffscreenBuffer.memory, 0);
+    vkBindBufferMemory(device, _offscreen_buffer.buffer, _offscreen_buffer.memory, 0);
 }
 
 void Simulation::createDescriptorPool()
@@ -1044,9 +1044,9 @@ void Simulation::createDescriptorPool()
     */
     std::array<VkDescriptorPoolSize, 2> poolSize = {};
     poolSize[0].type    = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;    /* Which descriptors types this pool is going to contain. */
-    poolSize[0].descriptorCount     = static_cast<uint32_t>(this->swapChainImages.size() + 1);  
+    poolSize[0].descriptorCount     = static_cast<uint32_t>(swapChainImages.size() + 1);  
     poolSize[1].type    = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSize[1].descriptorCount     = static_cast<uint32_t>(this->swapChainImages.size() + 1);
+    poolSize[1].descriptorCount     = static_cast<uint32_t>(swapChainImages.size() + 1);
 
 
     /* Allocate one pool which can contain up to swap images count descriptors sets. */
@@ -1054,48 +1054,48 @@ void Simulation::createDescriptorPool()
     poolInfo.sType  = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount  = static_cast<uint32_t>(poolSize.size());
     poolInfo.pPoolSizes     = poolSize.data();
-    poolInfo.maxSets        = static_cast<uint32_t>(this->swapChainImages.size() + 1);
+    poolInfo.maxSets        = static_cast<uint32_t>(swapChainImages.size() + 1);
     poolInfo.flags          = 0; /* Default Value */
 
-    if(vkCreateDescriptorPool(this->device, &poolInfo, nullptr, &this->descriptorPool) != VK_SUCCESS )
+    if(vkCreateDescriptorPool(device, &poolInfo, nullptr, &_descriptor_pool) != VK_SUCCESS )
         throw std::runtime_error("Failed to create descriptor pool. :( \n");
 }
 
 void Simulation::createDescriptorSets()
 {
     /* We will create one descriptor set for each swap chain image- all with the same layout. */
-    std::vector<VkDescriptorSetLayout> layouts(this->swapChainImages.size(), this->descriptorSetLayout);
+    std::vector<VkDescriptorSetLayout> layouts(swapChainImages.size(), descriptorSetLayout);
 
     VkDescriptorSetAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool        = this->descriptorPool;
+    allocInfo.descriptorPool        = _descriptor_pool;
     allocInfo.descriptorSetCount    = static_cast<uint32_t>(swapChainImages.size());
     allocInfo.pSetLayouts           = layouts.data();
 
     /* Allocate every descriptor set */
-    this->descriptorSets.scene.resize(this->swapChainImages.size());
-    if(vkAllocateDescriptorSets(this->device, &allocInfo, this->descriptorSets.scene.data()) != VK_SUCCESS )
+    _descriptor_sets.scene.resize(swapChainImages.size());
+    if(vkAllocateDescriptorSets(device, &allocInfo, _descriptor_sets.scene.data()) != VK_SUCCESS )
         throw std::runtime_error("Failed to allocate descriptor sets. :( \n");
 
     /* Configure each descriptor. */
-    for( size_t i = 0; i<this->swapChainImages.size(); i++)
+    for( size_t i = 0; i<swapChainImages.size(); i++)
     {
         /* Specify UBO information */
         VkDescriptorBufferInfo bufferInfo = {};
-        bufferInfo.buffer   = this->uniformBuffers[i];
+        bufferInfo.buffer   = uniformBuffers[i];
         bufferInfo.offset   = 0;
         bufferInfo.range    = VK_WHOLE_SIZE;  /* If Updating whole buffer - we can use VK_WHOLE_SIZE */
     
         /* Specify Sampler information */
         VkDescriptorImageInfo imageInfo {};
         imageInfo.imageLayout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-        imageInfo.imageView     = this->_offscreen_pass.depth.image_view;
-        imageInfo.sampler       = this->_offscreen_pass.depthSampler;
+        imageInfo.imageView     = _offscreen_pass.depth.image_view;
+        imageInfo.sampler       = _offscreen_pass.depthSampler;
 
         std::array<VkWriteDescriptorSet, 2> descriptorWrite = {};
         /* Descriptor set for buffer object. */
         descriptorWrite[0].sType   = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite[0].dstSet  = descriptorSets.scene[i];
+        descriptorWrite[0].dstSet  = _descriptor_sets.scene[i];
         descriptorWrite[0].dstBinding      = 0;    /* Destination binding in shader */
         descriptorWrite[0].dstArrayElement = 0;    /* Descriptors set can be an arrays, so we have to provide element to update. */
         
@@ -1108,7 +1108,7 @@ void Simulation::createDescriptorSets()
 
         /* Descriptor set for texture sampler image info. */
         descriptorWrite[1].sType   = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite[1].dstSet  = descriptorSets.scene[i];
+        descriptorWrite[1].dstSet  = _descriptor_sets.scene[i];
         descriptorWrite[1].dstBinding      = 1;    /* Destination binding in shader */
         descriptorWrite[1].dstArrayElement = 0;    /* Descriptors set can be an arrays, so we have to provide element to update. */
         
@@ -1119,7 +1119,7 @@ void Simulation::createDescriptorSets()
         descriptorWrite[1].pImageInfo      = &imageInfo;       /* Array with the descriptors count structs - image samplers */
         descriptorWrite[1].pTexelBufferView = nullptr;         /* Optional */
 
-        vkUpdateDescriptorSets(this->device, 
+        vkUpdateDescriptorSets(device, 
             static_cast<uint32_t>(descriptorWrite.size()),
             descriptorWrite.data(), 
             0, 
@@ -1131,33 +1131,33 @@ void Simulation::createDescriptorSets()
 
     /* Configure descriptors for offscreen rendering. */
     allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &this->descriptorSetLayout;
-    if(vkAllocateDescriptorSets(this->device, &allocInfo, &this->descriptorSets.offscreen) != VK_SUCCESS )
+    allocInfo.pSetLayouts = &descriptorSetLayout;
+    if(vkAllocateDescriptorSets(device, &allocInfo, &_descriptor_sets.offscreen) != VK_SUCCESS )
         throw std::runtime_error("Failed to allocate descriptor sets. :( \n");
 
     std::array<VkWriteDescriptorSet, 1> writeDescriptorSets = {};
     
     /* Specify UBO information */
     VkDescriptorBufferInfo uboOffscreen = {};
-    uboOffscreen.buffer   = OffscreenBuffer.buffer;
+    uboOffscreen.buffer   = _offscreen_buffer.buffer;
     uboOffscreen.offset   = 0;
     uboOffscreen.range    = sizeof(UBOOffscreenVS);  /* If Updating whole buffer - we can use VK_WHOLE_SIZE */
     
     writeDescriptorSets = {};
     /* Descriptor set for buffer object. */
     writeDescriptorSets[0].sType   = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writeDescriptorSets[0].dstSet  = descriptorSets.offscreen;
+    writeDescriptorSets[0].dstSet  = _descriptor_sets.offscreen;
     writeDescriptorSets[0].dstBinding      = 0;    /* Destination binding in shader */
     writeDescriptorSets[0].dstArrayElement = 0;    /* Descriptors set can be an arrays, so we have to provide element to update. */
         
     writeDescriptorSets[0].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     writeDescriptorSets[0].descriptorCount = 1;
 
-    writeDescriptorSets[0].pBufferInfo     = &this->OffscreenBuffer.descriptor;      /* Array with the descriptors count structs. */
+    writeDescriptorSets[0].pBufferInfo     = &_offscreen_buffer.descriptor;      /* Array with the descriptors count structs. */
     writeDescriptorSets[0].pImageInfo      = nullptr;          /* Optional */
     writeDescriptorSets[0].pTexelBufferView = nullptr;         /* Optional */
 
-    vkUpdateDescriptorSets(this->device, 
+    vkUpdateDescriptorSets(device, 
         static_cast<uint32_t>(writeDescriptorSets.size()),
         writeDescriptorSets.data(), 
         0, 
@@ -1168,15 +1168,15 @@ void Simulation::createDescriptorSets()
 void Simulation::createCommandBuffers()
 {
     // Allocate and record commands for each swap chain image.
-    commandBuffers.resize(swapChainFramebuffers.size());
+    _command_buffers.resize(_swapchain_framebuffers.size());
 
     VkCommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool           = this->commandPool;
+    allocInfo.commandPool           = _command_pool;
     allocInfo.level                 = VK_COMMAND_BUFFER_LEVEL_PRIMARY;  //Can be submitted to a queue for execution, but cannot be called from other command buffers.
-    allocInfo.commandBufferCount    = static_cast<uint32_t>(this->commandBuffers.size());
+    allocInfo.commandBufferCount    = static_cast<uint32_t>(_command_buffers.size());
     
-    if( vkAllocateCommandBuffers(this->device, &allocInfo, this->commandBuffers.data()) != VK_SUCCESS)
+    if( vkAllocateCommandBuffers(device, &allocInfo, _command_buffers.data()) != VK_SUCCESS)
         throw std::runtime_error("Failed to allocate command buffers. :( \n");
 
      /* Clear values - specify clear operation.
@@ -1185,7 +1185,7 @@ void Simulation::createCommandBuffers()
      std::array<VkClearValue, 2> clearValues;
 
     // Starting command buffer recording
-    for( size_t i = 0; i<this->commandBuffers.size(); i++)
+    for( size_t i = 0; i<_command_buffers.size(); i++)
     {
         VkCommandBufferBeginInfo beginInfo = {};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1193,7 +1193,7 @@ void Simulation::createCommandBuffers()
         beginInfo.pInheritanceInfo  = nullptr;  // Optional
 
         /* If the command buffer was already recorded once, then a call to vkBeginCommandBuffer will implicitly reset it. */
-        if( vkBeginCommandBuffer( this->commandBuffers[i], &beginInfo) != VK_SUCCESS)
+        if( vkBeginCommandBuffer( _command_buffers[i], &beginInfo) != VK_SUCCESS)
             throw std::runtime_error("Failed to begin recording command buffer. :( \n");
 
         /*
@@ -1204,52 +1204,52 @@ void Simulation::createCommandBuffers()
 
             VkRenderPassBeginInfo renderPassInfo {};
             renderPassInfo.sType    = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            renderPassInfo.renderPass   = this->_offscreen_pass.renderPass;
-            renderPassInfo.framebuffer  = this->_offscreen_pass.frameBuffer;
+            renderPassInfo.renderPass   = _offscreen_pass.renderPass;
+            renderPassInfo.framebuffer  = _offscreen_pass.frameBuffer;
             renderPassInfo.renderArea.extent.width      = _windowWidth;
             renderPassInfo.renderArea.extent.height     = _windowHeight;
             renderPassInfo.renderArea.offset            = {0, 0};
             renderPassInfo.clearValueCount              = 1;
             renderPassInfo.pClearValues                 = clearValues.data();
 
-            vkCmdBeginRenderPass(this->commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+            vkCmdBeginRenderPass(_command_buffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-            vkCmdBindPipeline(this->commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipelines.offscreen);
+            vkCmdBindPipeline(_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelines.offscreen);
 
             VkViewport viewport {};
             viewport.width  = _windowWidth;
             viewport.height = _windowHeight;
             viewport.minDepth = 0.f;
             viewport.maxDepth = 1.f;
-            vkCmdSetViewport(this->commandBuffers[i], 0, 1, &viewport);
+            vkCmdSetViewport(_command_buffers[i], 0, 1, &viewport);
 
             VkRect2D scissor {};
             scissor.extent.height   = _windowWidth;
             scissor.extent.width    = _windowHeight;
             scissor.offset.x    = 0;
             scissor.offset.y    = 0;
-            vkCmdSetScissor(this->commandBuffers[i], 0, 1, &scissor);
+            vkCmdSetScissor(_command_buffers[i], 0, 1, &scissor);
 
             /* Set depth bias. Avoiding artifacts. */
-            vkCmdSetDepthBias(this->commandBuffers[i], 1.25f, 0, 1.75f);
+            vkCmdSetDepthBias(_command_buffers[i], 1.25f, 0, 1.75f);
 
-            vkCmdBindDescriptorSets(this->commandBuffers[i], 
+            vkCmdBindDescriptorSets(_command_buffers[i], 
                 VK_PIPELINE_BIND_POINT_GRAPHICS,
-                this->pipelineLayouts.offscreen,
+                _pipeline_layouts.offscreen,
                 0,
                 1,
-                &this->descriptorSets.offscreen,
+                &_descriptor_sets.offscreen,
                 0,
                 nullptr
             );
 
-            VkBuffer vertexBuffers[] = {this->vertexBuffer};
+            VkBuffer vertexBuffers[] = {_vertex_buffer};
             VkDeviceSize offsets[] = {0};
-            vkCmdBindVertexBuffers(this->commandBuffers[i], 0, 1, vertexBuffers, offsets);
-            vkCmdBindIndexBuffer(this->commandBuffers[i], this->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-            vkCmdDrawIndexed(this->commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+            vkCmdBindVertexBuffers(_command_buffers[i], 0, 1, vertexBuffers, offsets);
+            vkCmdBindIndexBuffer(_command_buffers[i], _index_buffer, 0, VK_INDEX_TYPE_UINT32);
+            vkCmdDrawIndexed(_command_buffers[i], static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
 
-            vkCmdEndRenderPass(this->commandBuffers[i]);
+            vkCmdEndRenderPass(_command_buffers[i]);
         }
 
 
@@ -1261,11 +1261,11 @@ void Simulation::createCommandBuffers()
             VkRenderPassBeginInfo renderPassInfo = {};
             renderPassInfo.sType    = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
             renderPassInfo.renderPass   = _scene_pass.render_pass;
-            renderPassInfo.framebuffer  = this->swapChainFramebuffers[i];
+            renderPassInfo.framebuffer  = _swapchain_framebuffers[i];
             
             /* Define size of render area */
             renderPassInfo.renderArea.offset    = {0,0};
-            renderPassInfo.renderArea.extent    = this->swapChainExtent;
+            renderPassInfo.renderArea.extent    = _swap_chain.swap_chain_extent;
             
            
             clearValues[0].color = {0.f, 0.f, 0.f, 1.f};
@@ -1274,35 +1274,35 @@ void Simulation::createCommandBuffers()
             renderPassInfo.pClearValues     = clearValues.data();
             
             /* RECORDING */
-            vkCmdBeginRenderPass(this->commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+            vkCmdBeginRenderPass(_command_buffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
             
-            vkCmdBindPipeline(this->commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphicsPipeline);
+            vkCmdBindPipeline(_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, _graphics_pipeline);
 
             /* Binding vertex buffer */
-            VkBuffer vertexBuffers[] = {this->vertexBuffer};
+            VkBuffer vertexBuffers[] = {_vertex_buffer};
             VkDeviceSize offsets[] = {0};
-            vkCmdBindVertexBuffers(this->commandBuffers[i], 0, 1, vertexBuffers, offsets);
+            vkCmdBindVertexBuffers(_command_buffers[i], 0, 1, vertexBuffers, offsets);
 
             /* Binding index buffer */
-            vkCmdBindIndexBuffer(this->commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+            vkCmdBindIndexBuffer(_command_buffers[i], _index_buffer, 0, VK_INDEX_TYPE_UINT32);
 
             /* Bind descriptor sets- to update uniform data. */
-            vkCmdBindDescriptorSets(this->commandBuffers[i], 
+            vkCmdBindDescriptorSets(_command_buffers[i], 
                 VK_PIPELINE_BIND_POINT_GRAPHICS, 
-                this->pipelineLayout, 
+                _pipeline_layout, 
                 0, 
                 1, 
-                &descriptorSets.scene[i], 
+                &_descriptor_sets.scene[i], 
                 0, 
                 nullptr);
 
             /* Draw command by using indexes of vertices. */
-            vkCmdDrawIndexed(this->commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+            vkCmdDrawIndexed(_command_buffers[i], static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
 
             /* END RECORDING */
-            vkCmdEndRenderPass(this->commandBuffers[i]);
+            vkCmdEndRenderPass(_command_buffers[i]);
 
-            if( vkEndCommandBuffer( this->commandBuffers[i]) != VK_SUCCESS )
+            if( vkEndCommandBuffer( _command_buffers[i]) != VK_SUCCESS )
                 throw std::runtime_error("Failed to record command buffer! :( \n");
         }
     }
@@ -1310,10 +1310,10 @@ void Simulation::createCommandBuffers()
 
 void Simulation::createSyncObjects()
 {
-    this->imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    this->renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    this->inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
-    this->imagesInFlight.resize(swapChainImages.size(), VK_NULL_HANDLE);
+    _sync_obj._image_available_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    _sync_obj._render_finished_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    _sync_obj.inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+    _sync_obj.imagesInFlight.resize(swapChainImages.size(), VK_NULL_HANDLE);
 
     VkSemaphoreCreateInfo semaphoreInfo = {};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -1325,9 +1325,9 @@ void Simulation::createSyncObjects()
     
     for(size_t i = 0; i<MAX_FRAMES_IN_FLIGHT; i++)
     {
-        if( vkCreateSemaphore(this->device, &semaphoreInfo, nullptr, &this->imageAvailableSemaphores[i]) != VK_SUCCESS ||
-            vkCreateSemaphore(this->device, &semaphoreInfo, nullptr, &this->renderFinishedSemaphores[i]) != VK_SUCCESS || 
-            vkCreateFence(this->device, &fenceInfo, nullptr, &this->inFlightFences[i]) != VK_SUCCESS )
+        if( vkCreateSemaphore(device, &semaphoreInfo, nullptr, &_sync_obj._image_available_semaphores[i]) != VK_SUCCESS ||
+            vkCreateSemaphore(device, &semaphoreInfo, nullptr, &_sync_obj._render_finished_semaphores[i]) != VK_SUCCESS || 
+            vkCreateFence(device, &fenceInfo, nullptr, &_sync_obj.inFlightFences[i]) != VK_SUCCESS )
         {
             throw std::runtime_error("Failed to create semaphores :( \n");
         }
@@ -1336,7 +1336,7 @@ void Simulation::createSyncObjects()
 
 void Simulation::createSurface()
 {
-    if( glfwCreateWindowSurface(this->instance, _window, nullptr, &this->surface) != VK_SUCCESS)
+    if( glfwCreateWindowSurface(instance, _window, nullptr, &surface) != VK_SUCCESS)
     {
         throw new std::runtime_error("Failed to create window surface!");
     }
@@ -1362,7 +1362,7 @@ QueueFamilyIndices Simulation::findQueueFamilies(VkPhysicalDevice device)
         }
 
         VkBool32 presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, this->surface, &presentSupport);
+        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
 
         if (presentSupport)
             indices.presentFamily = i;
@@ -1376,7 +1376,7 @@ QueueFamilyIndices Simulation::findQueueFamilies(VkPhysicalDevice device)
 uint32_t Simulation::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(this->physicalDevice, &memProperties);
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
     
     /* 000100010b 
     *          ^  - check bit field in every step.
@@ -1403,7 +1403,7 @@ VkFormat Simulation::findSupportedFormat(const std::vector<VkFormat>& candidates
         *       bufferFeatures:         Use cases that are supported for buffers
         */
         VkFormatProperties properties;
-        vkGetPhysicalDeviceFormatProperties(this->physicalDevice, format, &properties);
+        vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &properties);
 
         if( tiling == VK_IMAGE_TILING_LINEAR && (properties.linearTilingFeatures & features) == features )
             return format;
@@ -1416,7 +1416,7 @@ VkFormat Simulation::findSupportedFormat(const std::vector<VkFormat>& candidates
 
 VkFormat Simulation::findDepthFormat()
 {
-    return this->findSupportedFormat( 
+    return findSupportedFormat( 
                     {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
                     VK_IMAGE_TILING_OPTIMAL,
                     VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
@@ -1427,24 +1427,24 @@ SwapChainSupportDetails Simulation::querySwapChainSupport(VkPhysicalDevice devic
 {
     SwapChainSupportDetails details;
 
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR( device, this->surface, &details.capabilities);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR( device, surface, &details.capabilities);
 
     uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, this->surface, &formatCount, nullptr);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
 
     if( formatCount != 0 )
     {
         details.formats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(device, this->surface, &formatCount, details.formats.data());
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
     }
 
     uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(device, this->surface, &presentModeCount, nullptr);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
 
     if( presentModeCount != 0 )
     {
         details.presentModes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(device, this->surface, &presentModeCount, details.presentModes.data()); 
+        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data()); 
     }
 
     return details;
@@ -1491,7 +1491,7 @@ VkExtent2D Simulation::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabili
         };
 
         /* 
-         * Clamp values of '_windowWidth' and 'this->windowHeight' between 
+         * Clamp values of '_windowWidth' and 'windowHeight' between 
          * allowed min and max extents supported by the implementation. 
          */
         actualExtent.width = std::max( capabilities.minImageExtent.width, 
@@ -1512,7 +1512,7 @@ VkShaderModule Simulation::createShaderModule(const std::vector<char>& code)
     createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
     VkShaderModule shaderModule;
-    if( vkCreateShaderModule(this->device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS )
+    if( vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS )
         throw new std::runtime_error("Failed to create shader module!");
 
     return shaderModule;
@@ -1528,22 +1528,22 @@ void Simulation::createBuffer(VkDeviceSize deviceSize, VkBufferUsageFlags usage,
     bufferInfo.flags    = 0;                                    /* No additional parameters */
     bufferInfo.sharingMode  = VK_SHARING_MODE_EXCLUSIVE;
 
-    if(vkCreateBuffer(this->device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS )
+    if(vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS )
         throw std::runtime_error("Failed to create vertex buffer. :( \n");
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(this->device, buffer, &memRequirements);
+    vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize    = memRequirements.size;
-    allocInfo.memoryTypeIndex   = this->findMemoryType(memRequirements.memoryTypeBits, properties ); // Mapped memory always matches the contents of the allocated memory.
+    allocInfo.memoryTypeIndex   = findMemoryType(memRequirements.memoryTypeBits, properties ); // Mapped memory always matches the contents of the allocated memory.
  
-    if(vkAllocateMemory(this->device, &allocInfo, nullptr, &bufferMemory))
+    if(vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory))
         throw std::runtime_error("Failed to allocate vertex buffer memory! :( \n");
 
     /* Bind created memory to vertex buffer object */
-    vkBindBufferMemory(this->device, buffer, bufferMemory, 0);
+    vkBindBufferMemory(device, buffer, bufferMemory, 0);
 }
 
 void Simulation::createImage(uint32_t width, uint32_t height, VkFormat imageFormat, VkImageTiling imgTiling, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags imgMemoryProperties, VkImage & image, VkDeviceMemory & imgMemory)
@@ -1564,7 +1564,7 @@ void Simulation::createImage(uint32_t width, uint32_t height, VkFormat imageForm
     imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
 
-    if(vkCreateImage(this->device, &imageInfo, nullptr, &image) != VK_SUCCESS )
+    if(vkCreateImage(device, &imageInfo, nullptr, &image) != VK_SUCCESS )
         throw std::runtime_error("Failed to create image. :( \n");
 
     /* Allocate memory for image memory. As like for the buffer. 
@@ -1574,18 +1574,18 @@ void Simulation::createImage(uint32_t width, uint32_t height, VkFormat imageForm
     *  Bind Allocated memory with previously created VkImage object.
     */
     VkMemoryRequirements memRequirements = {};
-    vkGetImageMemoryRequirements(this->device, image, &memRequirements);
+    vkGetImageMemoryRequirements(device, image, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize    = memRequirements.size;
-    allocInfo.memoryTypeIndex   = this->findMemoryType(memRequirements.memoryTypeBits, imgMemoryProperties);
+    allocInfo.memoryTypeIndex   = findMemoryType(memRequirements.memoryTypeBits, imgMemoryProperties);
 
-    if(vkAllocateMemory(this->device, &allocInfo, nullptr, &imgMemory) != VK_SUCCESS )
+    if(vkAllocateMemory(device, &allocInfo, nullptr, &imgMemory) != VK_SUCCESS )
         throw std::runtime_error("Failed to allocate image memory. :( \n");
     
     /* Bind image object with image memory object. */
-    vkBindImageMemory(this->device, image, imgMemory, 0);
+    vkBindImageMemory(device, image, imgMemory, 0);
 }
 
 VkImageView Simulation::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
@@ -1602,7 +1602,7 @@ VkImageView Simulation::createImageView(VkImage image, VkFormat format, VkImageA
     viewInfo.subresourceRange.layerCount        = 1;
 
     VkImageView imageView;
-    if(vkCreateImageView(this->device, &viewInfo, nullptr, &imageView) != VK_SUCCESS )
+    if(vkCreateImageView(device, &viewInfo, nullptr, &imageView) != VK_SUCCESS )
         throw std::runtime_error("Failed to create image view. :( \n");
 
     return imageView;
@@ -1611,7 +1611,7 @@ VkImageView Simulation::createImageView(VkImage image, VkFormat format, VkImageA
 void Simulation::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
     /* Begin recording command buffer */
-    VkCommandBuffer commandBuffer = this->beganSingleTimeCommands();
+    VkCommandBuffer commandBuffer = beganSingleTimeCommands();
 
     /* Provide information about regions to copy from and to. Call CopyBuffer command. */
     VkBufferCopy copyRegion = {};
@@ -1621,12 +1621,12 @@ void Simulation::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize
     vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
     /* End commands recording. */
-    this->endSingleTimeCommands(commandBuffer);
+    endSingleTimeCommands(commandBuffer);
 }
 
 void Simulation::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
 {
-    VkCommandBuffer commandBuffer = this->beganSingleTimeCommands();
+    VkCommandBuffer commandBuffer = beganSingleTimeCommands();
     
     /* Specify which part of the buffer is going to be copied to which part of the image */
     VkBufferImageCopy region = {};
@@ -1650,31 +1650,31 @@ void Simulation::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t widt
         &region
     );
 
-    this->endSingleTimeCommands(commandBuffer);
+    endSingleTimeCommands(commandBuffer);
 }
 
 void Simulation::updateVariables(uint32_t imageIndex)
 {
     /* Update Time information */
-    this->updateDT();
+    updateDT();
 
     /* Update mouse move variables */
-    this->updateMouseInput();
+    updateMouseInput();
 
     /* According to mouse offset values update camera pitch/yaw/roll */
-    this->cam01.updateMouseInput(_time.dt, _mouse_input.mouseOffsetX, _mouse_input.mouseOffsetY);
+    cam01.updateMouseInput(_time.dt, _mouse_input.mouseOffsetX, _mouse_input.mouseOffsetY);
 
     /* Check keyboard input. */
-    this->updateKeyboardInput();
+    updateKeyboardInput();
 
     /* Update light position */
-    this->updateLight();
+    updateLight();
 
     /* Update offscreen uniform buffer */
-    this->updateOffscreenBuffer();
+    updateOffscreenBuffer();
 
     /* With information about current image we can update its uniform buffer. */
-    this->updateUniformBuffer(imageIndex);
+    updateUniformBuffer(imageIndex);
 }
 
 void Simulation::updateDT()
@@ -1688,51 +1688,51 @@ void Simulation::updateUniformBuffer(uint32_t currentImage)
 {
     /* Update variables inside uniform buffer */
     glm::mat4 modelMat  = glm::mat4(1.f);
-    glm::mat4 viewMat   = this->cam01.getViewMatrix();
+    glm::mat4 viewMat   = cam01.getViewMatrix();
     glm::mat4 projMat   = glm::perspective(glm::radians(lightFOV),
-                        this->swapChainExtent.width / static_cast<float>(this->swapChainExtent.height),
+                        _swap_chain.swap_chain_extent.width / static_cast<float>(_swap_chain.swap_chain_extent.height),
                         0.1f,
                         20.f);
     /* GLM was originally designed for OpenGL, it is important to revert scaling factor of Y axis. */
     projMat[1][1] *= -1;
 
-    this->uboBufferObj.modelMat     = modelMat;
-    this->uboBufferObj.viewProjMat  = projMat * viewMat;
+    uboBufferObj.modelMat     = modelMat;
+    uboBufferObj.viewProjMat  = projMat * viewMat;
 
-    this->uboBufferObj.cameraPos    = glm::vec4(this->cam01.getPosition(), 1.f);
-    this->uboBufferObj.DepthMVP     = this->uboOffscreenVS.proj * this->uboOffscreenVS.view * this->uboOffscreenVS.model;
-    this->uboBufferObj.lightPos     = glm::vec4(this->lightPos, 1.f);
+    uboBufferObj.cameraPos    = glm::vec4(cam01.getPosition(), 1.f);
+    uboBufferObj.DepthMVP     = _uboOffscreenVS.proj * _uboOffscreenVS.view * _uboOffscreenVS.model;
+    uboBufferObj.lightPos     = glm::vec4(lightPos, 1.f);
 
     /* With providing this information, we can now map memory of the uniform buffer. */
     void* data;
-    vkMapMemory(this->device, 
-        this->uniformBuffersMemory[currentImage], 
+    vkMapMemory(device, 
+        uniformBuffersMemory[currentImage], 
         0,
         VK_WHOLE_SIZE,
         0,
         &data );
-    memcpy(data, &this->uboBufferObj, sizeof(this->uboBufferObj));
-    vkUnmapMemory(this->device, this->uniformBuffersMemory[currentImage]);
+    memcpy(data, &uboBufferObj, sizeof(uboBufferObj));
+    vkUnmapMemory(device, uniformBuffersMemory[currentImage]);
 }
 
 void Simulation::updateOffscreenBuffer()
 {
     // Matrix from light's point of view
-    this->uboOffscreenVS.proj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 20.f);
+    _uboOffscreenVS.proj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 20.f);
 
     /* GLM was originally designed for OpenGL, it is important to revert scaling factor of Y axis. */
-    this->uboOffscreenVS.proj[1][1] *= -1;
-    this->uboOffscreenVS.view = glm::lookAt(lightPos, glm::vec3(0.0f, 0.f, 0.f), glm::vec3(0, 1, 0));
-    this->uboOffscreenVS.model = glm::mat4(1.0f);
+    _uboOffscreenVS.proj[1][1] *= -1;
+    _uboOffscreenVS.view = glm::lookAt(lightPos, glm::vec3(0.0f, 0.f, 0.f), glm::vec3(0, 1, 0));
+    _uboOffscreenVS.model = glm::mat4(1.0f);
 
-    vkMapMemory( this->device,
-        this->OffscreenBuffer.memory,
+    vkMapMemory( device,
+        _offscreen_buffer.memory,
         0,
         VK_WHOLE_SIZE,
         0, 
-        &this->OffscreenBuffer.mapped);
-    memcpy(OffscreenBuffer.mapped, &this->uboOffscreenVS, sizeof(uboOffscreenVS));
-    vkUnmapMemory(this->device, this->OffscreenBuffer.memory);
+        &_offscreen_buffer.mapped);
+    memcpy(_offscreen_buffer.mapped, &_uboOffscreenVS, sizeof(_uboOffscreenVS));
+    vkUnmapMemory(device, _offscreen_buffer.memory);
 }
 
 void Simulation::updateKeyboardInput()
@@ -1746,49 +1746,49 @@ void Simulation::updateKeyboardInput()
     // Camera
     if( glfwGetKey( _window, GLFW_KEY_W ) == GLFW_PRESS )
     {
-        this->cam01.move(_time.dt, FORWARD);
+        cam01.move(_time.dt, FORWARD);
     }
 
     if( glfwGetKey( _window, GLFW_KEY_S ) == GLFW_PRESS )
     {
-        this->cam01.move(_time.dt, BACKWARD);
+        cam01.move(_time.dt, BACKWARD);
     }
 
     if( glfwGetKey( _window, GLFW_KEY_A ) == GLFW_PRESS )
     {
-        this->cam01.move(_time.dt, LEFT);
+        cam01.move(_time.dt, LEFT);
     }
 
     if( glfwGetKey( _window, GLFW_KEY_D ) == GLFW_PRESS )
     {
-        this->cam01.move(_time.dt, RIGTH);
+        cam01.move(_time.dt, RIGTH);
     }
 
     if( glfwGetKey( _window, GLFW_KEY_SPACE ) == GLFW_PRESS )
     {
-        this->cam01.move(_time.dt, UPWARD);
+        cam01.move(_time.dt, UPWARD);
     }
 
     if( glfwGetKey( _window, GLFW_KEY_C ) == GLFW_PRESS )
     {
-        this->cam01.move(_time.dt, DOWNWARD);
+        cam01.move(_time.dt, DOWNWARD);
     }
 
 
 
     if( glfwGetKey( _window, GLFW_KEY_UP ) == GLFW_PRESS )
     {
-        this->lightPos.x += 0.1f;
+        lightPos.x += 0.1f;
     }
 
     if( glfwGetKey( _window, GLFW_KEY_DOWN ) == GLFW_PRESS )
     {
-        this->lightPos.y -= 0.1f;
+        lightPos.y -= 0.1f;
     }
 
     if( glfwGetKey( _window, GLFW_KEY_LEFT ) == GLFW_PRESS )
     {
-        this->lightPos.z += 0.1f;
+        lightPos.z += 0.1f;
     }
 
 }
@@ -1821,7 +1821,7 @@ void Simulation::updateLight()
 
 void Simulation::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
 {
-    VkCommandBuffer commandBuffer = this->beganSingleTimeCommands();
+    VkCommandBuffer commandBuffer = beganSingleTimeCommands();
 
     /* Use VkImageMemoryBarrier to ensure that write to the buffer completes before reading from it. 
     *  It is equivalent to VkBufferMemoryBarrier for buffers.
@@ -1885,7 +1885,7 @@ void Simulation::transitionImageLayout(VkImage image, VkFormat format, VkImageLa
         1, &barrier     /* Image Memory Barriers    */
         );
 
-    this->endSingleTimeCommands(commandBuffer);
+    endSingleTimeCommands(commandBuffer);
 }
 
 VkCommandBuffer Simulation::beganSingleTimeCommands()
@@ -1893,12 +1893,12 @@ VkCommandBuffer Simulation::beganSingleTimeCommands()
     VkCommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool           = this->commandPool;
+    allocInfo.commandPool           = _command_pool;
     allocInfo.commandBufferCount    = 1;
 
     /* Allocate command buffer according to allocation structure */
     VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(this->device, &allocInfo, &commandBuffer);
+    vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
 
     VkCommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1919,10 +1919,10 @@ void Simulation::endSingleTimeCommands(VkCommandBuffer commandBuffer)
     submitInfo.commandBufferCount   = 1;
     submitInfo.pCommandBuffers      = &commandBuffer;
 
-    vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(this->graphicsQueue);
+    vkQueueSubmit(_queues.graphics_queue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(_queues.graphics_queue);
     
-    vkFreeCommandBuffers(this->device, this->commandPool, 1, &commandBuffer);
+    vkFreeCommandBuffers(device, _command_pool, 1, &commandBuffer);
 }
 
 void Simulation::recreateSwapChain()
@@ -1940,42 +1940,42 @@ void Simulation::recreateSwapChain()
         glfwWaitEvents();
     }
 
-    vkDeviceWaitIdle(this->device);
+    vkDeviceWaitIdle(device);
 
-    this->cleanupSwapChain();
+    cleanupSwapChain();
 
-    this->createSwapChain();
-    this->createImageViews();
-    this->createRenderPass();
-    this->createGraphicsPipeline();
-    this->createDepthResources();
-    this->createFramebuffers();
-    this->createUniformBuffers();
-    this->createDescriptorPool();
-    this->createDescriptorSets();
-    this->createCommandBuffers();
+    createSwapChain();
+    createImageViews();
+    createRenderPass();
+    createGraphicsPipeline();
+    createDepthResources();
+    createFramebuffers();
+    createUniformBuffers();
+    createDescriptorPool();
+    createDescriptorSets();
+    createCommandBuffers();
 }
 
 void Simulation::cleanupSwapChain()
 {
     /* Destroy depth resources */
-    vkDestroyImageView(this->device, _scene_pass.depth.image_view, nullptr);
-    vkDestroyImage(this->device, _scene_pass.depth.image, nullptr);
-    vkFreeMemory(this->device, _scene_pass.depth.memory, nullptr);
+    vkDestroyImageView(device, _scene_pass.depth.image_view, nullptr);
+    vkDestroyImage(device, _scene_pass.depth.image, nullptr);
+    vkFreeMemory(device, _scene_pass.depth.memory, nullptr);
 
-    for( size_t i = 0; i < swapChainFramebuffers.size(); i++ )
-        vkDestroyFramebuffer(this->device, this->swapChainFramebuffers[i], nullptr);
+    for( size_t i = 0; i < _swapchain_framebuffers.size(); i++ )
+        vkDestroyFramebuffer(device, _swapchain_framebuffers[i], nullptr);
 
-    vkFreeCommandBuffers(this->device, this->commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
+    vkFreeCommandBuffers(device, _command_pool, static_cast<uint32_t>(_command_buffers.size()), _command_buffers.data());
 
-    vkDestroyPipeline(this->device, this->graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(this->device, this->pipelineLayout, nullptr);
-    vkDestroyRenderPass(this->device, _scene_pass.render_pass, nullptr);
+    vkDestroyPipeline(device, _graphics_pipeline, nullptr);
+    vkDestroyPipelineLayout(device, _pipeline_layout, nullptr);
+    vkDestroyRenderPass(device, _scene_pass.render_pass, nullptr);
 
     for( size_t i = 0; i < swapChainImageViews.size(); i++ )
-        vkDestroyImageView(this->device, this->swapChainImageViews[i], nullptr);
+        vkDestroyImageView(device, swapChainImageViews[i], nullptr);
 
-    vkDestroySwapchainKHR(this->device, this->swapChain, nullptr);
+    vkDestroySwapchainKHR(device, _swap_chain.swap_chain, nullptr);
     
     for (size_t i = 0; i < swapChainImages.size(); i++) 
     {
@@ -1983,7 +1983,7 @@ void Simulation::cleanupSwapChain()
         vkFreeMemory(device, uniformBuffersMemory[i], nullptr);
     }
 
-    vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+    vkDestroyDescriptorPool(device, _descriptor_pool, nullptr);
 }
 
 void Simulation::initGLFW()
@@ -2072,7 +2072,7 @@ bool Simulation::isDeviceSuitable(VkPhysicalDevice device)
 void Simulation::drawFrame()
 {
     // Wait for previous frame to be finished. 
-    vkWaitForFences(this->device, 1, &this->inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+    vkWaitForFences(device, 1, &_sync_obj.inFlightFences[_currentFrame], VK_TRUE, UINT64_MAX);
 
     /*
     *  Perform operations:
@@ -2083,17 +2083,17 @@ void Simulation::drawFrame()
     
     uint32_t imageIndex;
     VkResult result = vkAcquireNextImageKHR(
-        this->device,                   // Logical Device
-        this->swapChain,                // Swap chain from which acquire image.
+        device,                   // Logical Device
+        _swap_chain.swap_chain,                // Swap chain from which acquire image.
         UINT64_MAX,                     // Timeout in nanoseconds
-        this->imageAvailableSemaphores[this->currentFrame],  // Semaphore to be signalized after using the image
+        _sync_obj._image_available_semaphores[_currentFrame],  // Semaphore to be signalized after using the image
         VK_NULL_HANDLE,                 // Fence - null
         &imageIndex                     // Image index - refers to the VkImage in swapChainImages array.
     );
 
     if( result == VK_ERROR_OUT_OF_DATE_KHR )
     {
-        this->recreateSwapChain();
+        recreateSwapChain();
         return;
     }
     else if ( result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR )
@@ -2102,20 +2102,20 @@ void Simulation::drawFrame()
     }
 
     // Check if previous frame is using this image (there is its fence to wait on).
-    if( this->imagesInFlight[imageIndex] != VK_NULL_HANDLE)
-        vkWaitForFences(this->device, 1, &this->imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+    if( _sync_obj.imagesInFlight[imageIndex] != VK_NULL_HANDLE)
+        vkWaitForFences(device, 1, &_sync_obj.imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
 
     // Mark the image as now being in use by current frame
-    this->imagesInFlight[imageIndex] = this->inFlightFences[currentFrame];
+    _sync_obj.imagesInFlight[imageIndex] = _sync_obj.inFlightFences[_currentFrame];
     
     /* Update Input and Variables */
-    this->updateVariables(imageIndex);
+    updateVariables(imageIndex);
 
     /* Submit the command buffer */
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     
-    VkSemaphore waitSemaphores[] = { this->imageAvailableSemaphores[currentFrame] };
+    VkSemaphore waitSemaphores[] = { _sync_obj._image_available_semaphores[_currentFrame] };
     VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     submitInfo.waitSemaphoreCount   = 1;
     submitInfo.pWaitSemaphores      = waitSemaphores;
@@ -2123,17 +2123,17 @@ void Simulation::drawFrame()
 
     /* Which command buffer to actually submit for execution */
     submitInfo.commandBufferCount   = 1;
-    submitInfo.pCommandBuffers      = &this->commandBuffers[imageIndex];
+    submitInfo.pCommandBuffers      = &_command_buffers[imageIndex];
 
     /* Which semaphore to signal once the command buffer finished execution */
-    VkSemaphore signalSemaphores[]  = { this->renderFinishedSemaphores[currentFrame] };
+    VkSemaphore signalSemaphores[]  = { _sync_obj._render_finished_semaphores[_currentFrame] };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores    = signalSemaphores;
 
     //Reset fence to be 'unsignaled'.
-    vkResetFences(this->device, 1, &this->inFlightFences[currentFrame]);
+    vkResetFences(device, 1, &_sync_obj.inFlightFences[_currentFrame]);
 
-    if( vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, this->inFlightFences[this->currentFrame]) != VK_SUCCESS )
+    if( vkQueueSubmit(_queues.graphics_queue, 1, &submitInfo, _sync_obj.inFlightFences[_currentFrame]) != VK_SUCCESS )
         throw std::runtime_error("Failed to submit draw command buffer! :(\n");
 
     /* Presentation - submit the result back to the swap chain */
@@ -2143,7 +2143,7 @@ void Simulation::drawFrame()
     presentInfo.waitSemaphoreCount  = 1;
     presentInfo.pWaitSemaphores     = signalSemaphores; // Which semaphores to wait on before presentation.
 
-    VkSwapchainKHR  swapChains[]    = {swapChain};
+    VkSwapchainKHR  swapChains[]    = {_swap_chain.swap_chain};
     presentInfo.swapchainCount      = 1;
     presentInfo.pSwapchains         = swapChains;   // Which swapchains to present image. 
     presentInfo.pImageIndices       = &imageIndex;
@@ -2151,22 +2151,22 @@ void Simulation::drawFrame()
     // Can specify array of VkResult values to check for every individual swap chain if presentation was successful.
     presentInfo.pResults = nullptr; //Optional.
 
-    VkResult presentResult = vkQueuePresentKHR(presentQueue, &presentInfo);
+    VkResult presentResult = vkQueuePresentKHR(_queues.present_queue, &presentInfo);
 
     if( result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || _framebufferResized )
     {
         _framebufferResized = false;
-        this->recreateSwapChain();
+        recreateSwapChain();
     }
     else if( result != VK_SUCCESS )
     {
         throw std::runtime_error("Failed to present swap chain image! :(\n");
     }
 
-    vkQueueWaitIdle(presentQueue);
+    vkQueueWaitIdle(_queues.present_queue);
 
     // Proceed to next frame counter
-    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+    _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 void Simulation::mainLoop()
@@ -2182,46 +2182,46 @@ void Simulation::mainLoop()
 
 void Simulation::cleanup()
 {
-    this->cleanupSwapChain();
+    cleanupSwapChain();
 
-    vkDestroyPipeline(this->device, this->pipelines.offscreen, nullptr);
-    vkDestroyPipelineLayout(this->device, this->pipelineLayouts.offscreen, nullptr);
+    vkDestroyPipeline(device, _pipelines.offscreen, nullptr);
+    vkDestroyPipelineLayout(device, _pipeline_layouts.offscreen, nullptr);
 
-    vkFreeMemory(this->device, this->OffscreenBuffer.memory, nullptr);
-    vkDestroyBuffer(this->device, this->OffscreenBuffer.buffer, nullptr);
+    vkFreeMemory(device, _offscreen_buffer.memory, nullptr);
+    vkDestroyBuffer(device, _offscreen_buffer.buffer, nullptr);
 
-    vkDestroyFramebuffer(this->device, this->_offscreen_pass.frameBuffer, nullptr);
-    vkDestroyRenderPass(this->device, this->_offscreen_pass.renderPass, nullptr);
+    vkDestroyFramebuffer(device, _offscreen_pass.frameBuffer, nullptr);
+    vkDestroyRenderPass(device, _offscreen_pass.renderPass, nullptr);
 
-    vkDestroySampler(this->device, this->_offscreen_pass.depthSampler, nullptr);
-    vkDestroyImageView(this->device, this->_offscreen_pass.depth.image_view, nullptr);
-    vkDestroyImage(this->device, this->_offscreen_pass.depth.image, nullptr);
-    vkFreeMemory(this->device, this->_offscreen_pass.depth.memory, nullptr);
+    vkDestroySampler(device, _offscreen_pass.depthSampler, nullptr);
+    vkDestroyImageView(device, _offscreen_pass.depth.image_view, nullptr);
+    vkDestroyImage(device, _offscreen_pass.depth.image, nullptr);
+    vkFreeMemory(device, _offscreen_pass.depth.memory, nullptr);
 
     /* Destroy descriptor set layout which is bounding all of the descriptors. */
-    vkDestroyDescriptorSetLayout(this->device, this->descriptorSetLayout, nullptr);
+    vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
 
     /* Destroy Index Buffer and allocated to it memory */
-    vkDestroyBuffer(this->device, this->indexBuffer, nullptr);
-    vkFreeMemory(this->device, this->indexBufferMemory, nullptr);
+    vkDestroyBuffer(device, _index_buffer, nullptr);
+    vkFreeMemory(device, _index_buffer_memory, nullptr);
 
     /* Destroy Vertex Buffer and allocated to it memory */
-    vkDestroyBuffer(this->device, this->vertexBuffer, nullptr);
-    vkFreeMemory(this->device, this->vertexBufferMemory, nullptr);
+    vkDestroyBuffer(device, _vertex_buffer, nullptr);
+    vkFreeMemory(device, _vertex_buffer_memory, nullptr);
 
     for(size_t i = 0; i<MAX_FRAMES_IN_FLIGHT; i++)
     {
-        vkDestroySemaphore(this->device, this->imageAvailableSemaphores[i], nullptr);
-        vkDestroySemaphore(this->device, this->renderFinishedSemaphores[i], nullptr);
-        vkDestroyFence(this->device, this->inFlightFences[i], nullptr);
+        vkDestroySemaphore(device, _sync_obj._image_available_semaphores[i], nullptr);
+        vkDestroySemaphore(device, _sync_obj._render_finished_semaphores[i], nullptr);
+        vkDestroyFence(device, _sync_obj.inFlightFences[i], nullptr);
     }
 
-    vkDestroyCommandPool(this->device, this->commandPool, nullptr);
+    vkDestroyCommandPool(device, _command_pool, nullptr);
 
-    vkDestroyDevice(this->device, nullptr);
+    vkDestroyDevice(device, nullptr);
 
-    vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
-    vkDestroyInstance(this->instance, nullptr);
+    vkDestroySurfaceKHR(instance, surface, nullptr);
+    vkDestroyInstance(instance, nullptr);
 
     glfwDestroyWindow(_window);
     glfwTerminate();
