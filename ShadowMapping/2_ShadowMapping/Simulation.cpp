@@ -15,7 +15,7 @@
 static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
 {
     auto app = reinterpret_cast<Simulation*>(glfwGetWindowUserPointer(window));
-    app->framebufferResized = true;
+    app->_framebufferResized = true;
 }
 
 // ------------------------------------
@@ -44,9 +44,6 @@ void Simulation::run()
 
 void Simulation::initVulkan()
 {
-    this->offscreenPass.width   = _windowWidth;
-    this->offscreenPass.height  = _windowHeight;     /* TODO: Change to bigger shadow map resolution. */
-
     this->createInstance();
     this->createSurface();
     this->pickPhysicalDevice();
@@ -353,7 +350,7 @@ void Simulation::createRenderPass()
     renderPassInfo.dependencyCount  = 1;
     renderPassInfo.pDependencies    = &dependency;
 
-    if( vkCreateRenderPass(this->device, &renderPassInfo, nullptr, &this->renderPass) != VK_SUCCESS )
+    if( vkCreateRenderPass(this->device, &renderPassInfo, nullptr, &_scene_pass.render_pass) != VK_SUCCESS )
     {
         throw std::runtime_error("Failed to create render pass. :( \n");
     }
@@ -568,7 +565,7 @@ void Simulation::createGraphicsPipeline()
     pipelineInfo.pDynamicState          = nullptr;
     
     pipelineInfo.layout                 = this->pipelineLayout;
-    pipelineInfo.renderPass             = this->renderPass;
+    pipelineInfo.renderPass             = _scene_pass.render_pass;
     
     pipelineInfo.subpass                = 0;    // Index of the subpass where this pipeline will be used.
     
@@ -594,7 +591,7 @@ void Simulation::createGraphicsPipeline()
     pipelineInfo.pDynamicState = &dynamicState;
     
     pipelineInfo.layout     = pipelineLayouts.offscreen;
-    pipelineInfo.renderPass = offscreenPass.renderPass;
+    pipelineInfo.renderPass = _offscreen_pass.renderPass;
 
     if( vkCreateGraphicsPipelines(this->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &this->pipelines.offscreen) != VK_SUCCESS)
         throw std::runtime_error("Failed to create Graphics Pipeline- offscreen render pass! :( \n");
@@ -612,11 +609,11 @@ void Simulation::createFramebuffers()
 
     for(size_t i=0; i< swapChainImageViews.size(); i++)
     {
-        std::array<VkImageView, 2> attachments = { swapChainImageViews[i], depthImageView };
+        std::array<VkImageView, 2> attachments = { swapChainImageViews[i], _scene_pass.depth.image_view };
 
         VkFramebufferCreateInfo framebufferInfo = {};
         framebufferInfo.sType   = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass  = this->renderPass;
+        framebufferInfo.renderPass  = _scene_pass.render_pass;
         framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
         framebufferInfo.pAttachments    = attachments.data();
         framebufferInfo.width           = swapChainExtent.width;
@@ -635,14 +632,14 @@ void Simulation::createOffscreenFramebuffer()
     // Create frame buffer and connect it with created render pass. 
     VkFramebufferCreateInfo framebufferCreateInfo {};
     framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferCreateInfo.renderPass        = offscreenPass.renderPass;
+    framebufferCreateInfo.renderPass        = _offscreen_pass.renderPass;
     framebufferCreateInfo.attachmentCount   = 1;
-    framebufferCreateInfo.pAttachments      = &this->offscreenPass.depth.ImageView;
-    framebufferCreateInfo.width             = this->offscreenPass.width;
-    framebufferCreateInfo.height            = this->offscreenPass.height;
+    framebufferCreateInfo.pAttachments      = &this->_offscreen_pass.depth.image_view;
+    framebufferCreateInfo.width             = _windowWidth;
+    framebufferCreateInfo.height            = _windowHeight;
     framebufferCreateInfo.layers            = 1;
 
-    if(vkCreateFramebuffer(this->device, &framebufferCreateInfo, nullptr, &this->offscreenPass.frameBuffer) != VK_SUCCESS)
+    if(vkCreateFramebuffer(this->device, &framebufferCreateInfo, nullptr, &this->_offscreen_pass.frameBuffer) != VK_SUCCESS)
         throw std::runtime_error("Failed to create offscreen framebuffer :( \n");
 }
 
@@ -696,7 +693,7 @@ void Simulation::prepareOffscreenRenderPass()
     renderPassCreateInfo.subpassCount       = 1;
     renderPassCreateInfo.pSubpasses         = &subpass;
 
-    if( vkCreateRenderPass(this->device, &renderPassCreateInfo, nullptr, &this->offscreenPass.renderPass) != VK_SUCCESS )
+    if( vkCreateRenderPass(this->device, &renderPassCreateInfo, nullptr, &this->_offscreen_pass.renderPass) != VK_SUCCESS )
         throw std::runtime_error("Failed to create render pass. :( \n");
 }
 
@@ -748,7 +745,7 @@ void Simulation::createTextureSamper()
     depthSamplerInfo.maxLod      = 1.f;
     
     /* Image Sampler do not refer VkImage object anywhere. It is distinct object that provide interface to extract color from texture. */
-    if(vkCreateSampler(this->device, &depthSamplerInfo, nullptr, &this->offscreenPass.depthSampler) != VK_SUCCESS )
+    if(vkCreateSampler(this->device, &depthSamplerInfo, nullptr, &this->_offscreen_pass.depthSampler) != VK_SUCCESS )
         throw std::runtime_error("Failed to create offscreen texture sampler! :( \n");
 }
 
@@ -767,7 +764,7 @@ void Simulation::loadModel()
     std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
 
     /* Load object from *.obj file. */
-    if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str()))
+    if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH))
     {
         throw std::runtime_error(warn + err);
     }
@@ -868,35 +865,33 @@ void Simulation::loadModel()
 
 void Simulation::createDepthResources()
 {
-    VkFormat depthFormat = DEPTH_FORMAT;//this->findDepthFormat();
-    
     /* Create vkImage object with given properties */
     this->createImage(this->swapChainExtent.width,
             this->swapChainExtent.height,
-            depthFormat,
+            DEPTH_FORMAT,
             VK_IMAGE_TILING_OPTIMAL,
             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            depthImage,
-            depthImageMemory
+            _scene_pass.depth.image,
+            _scene_pass.depth.memory
         );
     
     /* Crate Image view bound to previously created depth image */
-    this->depthImageView = this->createImageView(this->depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+    _scene_pass.depth.image_view = this->createImageView(_scene_pass.depth.image, DEPTH_FORMAT, VK_IMAGE_ASPECT_DEPTH_BIT);
 
     /* Create Image for depth map. Offscreen */
-    this->createImage(offscreenPass.width, 
-        offscreenPass.height, 
+    this->createImage(_windowWidth, 
+        _windowHeight, 
         DEPTH_FORMAT, 
         VK_IMAGE_TILING_OPTIMAL, 
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        this->offscreenPass.depth.image,
-        this->offscreenPass.depth.memory
+        _offscreen_pass.depth.image,
+        _offscreen_pass.depth.memory
     );
 
     /* Crate Image View for crated depth image. Offscreen */
-    this->offscreenPass.depth.ImageView = this->createImageView(this->offscreenPass.depth.image,
+    this->_offscreen_pass.depth.image_view = this->createImageView(this->_offscreen_pass.depth.image,
         DEPTH_FORMAT,
         VK_IMAGE_ASPECT_DEPTH_BIT
     );
@@ -1094,8 +1089,8 @@ void Simulation::createDescriptorSets()
         /* Specify Sampler information */
         VkDescriptorImageInfo imageInfo {};
         imageInfo.imageLayout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-        imageInfo.imageView     = this->offscreenPass.depth.ImageView;
-        imageInfo.sampler       = this->offscreenPass.depthSampler;
+        imageInfo.imageView     = this->_offscreen_pass.depth.image_view;
+        imageInfo.sampler       = this->_offscreen_pass.depthSampler;
 
         std::array<VkWriteDescriptorSet, 2> descriptorWrite = {};
         /* Descriptor set for buffer object. */
@@ -1209,10 +1204,10 @@ void Simulation::createCommandBuffers()
 
             VkRenderPassBeginInfo renderPassInfo {};
             renderPassInfo.sType    = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            renderPassInfo.renderPass   = this->offscreenPass.renderPass;
-            renderPassInfo.framebuffer  = this->offscreenPass.frameBuffer;
-            renderPassInfo.renderArea.extent.width      = this->offscreenPass.width;
-            renderPassInfo.renderArea.extent.height     = this->offscreenPass.height;
+            renderPassInfo.renderPass   = this->_offscreen_pass.renderPass;
+            renderPassInfo.framebuffer  = this->_offscreen_pass.frameBuffer;
+            renderPassInfo.renderArea.extent.width      = _windowWidth;
+            renderPassInfo.renderArea.extent.height     = _windowHeight;
             renderPassInfo.renderArea.offset            = {0, 0};
             renderPassInfo.clearValueCount              = 1;
             renderPassInfo.pClearValues                 = clearValues.data();
@@ -1222,15 +1217,15 @@ void Simulation::createCommandBuffers()
             vkCmdBindPipeline(this->commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipelines.offscreen);
 
             VkViewport viewport {};
-            viewport.width  = this->offscreenPass.width;
-            viewport.height = this->offscreenPass.height;
+            viewport.width  = _windowWidth;
+            viewport.height = _windowHeight;
             viewport.minDepth = 0.f;
             viewport.maxDepth = 1.f;
             vkCmdSetViewport(this->commandBuffers[i], 0, 1, &viewport);
 
             VkRect2D scissor {};
-            scissor.extent.height   = this->offscreenPass.height;
-            scissor.extent.width    = this->offscreenPass.width;
+            scissor.extent.height   = _windowWidth;
+            scissor.extent.width    = _windowHeight;
             scissor.offset.x    = 0;
             scissor.offset.y    = 0;
             vkCmdSetScissor(this->commandBuffers[i], 0, 1, &scissor);
@@ -1265,7 +1260,7 @@ void Simulation::createCommandBuffers()
         {
             VkRenderPassBeginInfo renderPassInfo = {};
             renderPassInfo.sType    = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            renderPassInfo.renderPass   = this->renderPass;
+            renderPassInfo.renderPass   = _scene_pass.render_pass;
             renderPassInfo.framebuffer  = this->swapChainFramebuffers[i];
             
             /* Define size of render area */
@@ -1667,7 +1662,7 @@ void Simulation::updateVariables(uint32_t imageIndex)
     this->updateMouseInput();
 
     /* According to mouse offset values update camera pitch/yaw/roll */
-    this->cam01.updateMouseInput(this->dt, _mouse_input.mouseOffsetX, _mouse_input.mouseOffsetY);
+    this->cam01.updateMouseInput(_time.dt, _mouse_input.mouseOffsetX, _mouse_input.mouseOffsetY);
 
     /* Check keyboard input. */
     this->updateKeyboardInput();
@@ -1684,9 +1679,9 @@ void Simulation::updateVariables(uint32_t imageIndex)
 
 void Simulation::updateDT()
 {
-	this->currTime = static_cast<float>(glfwGetTime());
-	this->dt = this->currTime - this->lastTime;
-	this->lastTime = this->currTime;
+    _time.currTime = static_cast<float>(glfwGetTime());
+    _time.dt = _time.currTime - _time.lastTime;
+    _time.lastTime = _time.currTime;
 }
 
 void Simulation::updateUniformBuffer(uint32_t currentImage)
@@ -1751,32 +1746,32 @@ void Simulation::updateKeyboardInput()
     // Camera
     if( glfwGetKey( _window, GLFW_KEY_W ) == GLFW_PRESS )
     {
-        this->cam01.move(this->dt, FORWARD);
+        this->cam01.move(_time.dt, FORWARD);
     }
 
     if( glfwGetKey( _window, GLFW_KEY_S ) == GLFW_PRESS )
     {
-        this->cam01.move(this->dt, BACKWARD);
+        this->cam01.move(_time.dt, BACKWARD);
     }
 
     if( glfwGetKey( _window, GLFW_KEY_A ) == GLFW_PRESS )
     {
-        this->cam01.move(this->dt, LEFT);
+        this->cam01.move(_time.dt, LEFT);
     }
 
     if( glfwGetKey( _window, GLFW_KEY_D ) == GLFW_PRESS )
     {
-        this->cam01.move(this->dt, RIGTH);
+        this->cam01.move(_time.dt, RIGTH);
     }
 
     if( glfwGetKey( _window, GLFW_KEY_SPACE ) == GLFW_PRESS )
     {
-        this->cam01.move(this->dt, UPWARD);
+        this->cam01.move(_time.dt, UPWARD);
     }
 
     if( glfwGetKey( _window, GLFW_KEY_C ) == GLFW_PRESS )
     {
-        this->cam01.move(this->dt, DOWNWARD);
+        this->cam01.move(_time.dt, DOWNWARD);
     }
 
 
@@ -1964,9 +1959,9 @@ void Simulation::recreateSwapChain()
 void Simulation::cleanupSwapChain()
 {
     /* Destroy depth resources */
-    vkDestroyImageView(this->device, this->depthImageView, nullptr);
-    vkDestroyImage(this->device, this->depthImage, nullptr);
-    vkFreeMemory(this->device, this->depthImageMemory, nullptr);
+    vkDestroyImageView(this->device, _scene_pass.depth.image_view, nullptr);
+    vkDestroyImage(this->device, _scene_pass.depth.image, nullptr);
+    vkFreeMemory(this->device, _scene_pass.depth.memory, nullptr);
 
     for( size_t i = 0; i < swapChainFramebuffers.size(); i++ )
         vkDestroyFramebuffer(this->device, this->swapChainFramebuffers[i], nullptr);
@@ -1975,7 +1970,7 @@ void Simulation::cleanupSwapChain()
 
     vkDestroyPipeline(this->device, this->graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(this->device, this->pipelineLayout, nullptr);
-    vkDestroyRenderPass(this->device, this->renderPass, nullptr);
+    vkDestroyRenderPass(this->device, _scene_pass.render_pass, nullptr);
 
     for( size_t i = 0; i < swapChainImageViews.size(); i++ )
         vkDestroyImageView(this->device, this->swapChainImageViews[i], nullptr);
@@ -2158,9 +2153,9 @@ void Simulation::drawFrame()
 
     VkResult presentResult = vkQueuePresentKHR(presentQueue, &presentInfo);
 
-    if( result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized )
+    if( result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || _framebufferResized )
     {
-        framebufferResized = false;
+        _framebufferResized = false;
         this->recreateSwapChain();
     }
     else if( result != VK_SUCCESS )
@@ -2195,13 +2190,13 @@ void Simulation::cleanup()
     vkFreeMemory(this->device, this->OffscreenBuffer.memory, nullptr);
     vkDestroyBuffer(this->device, this->OffscreenBuffer.buffer, nullptr);
 
-    vkDestroyFramebuffer(this->device, this->offscreenPass.frameBuffer, nullptr);
-    vkDestroyRenderPass(this->device, this->offscreenPass.renderPass, nullptr);
+    vkDestroyFramebuffer(this->device, this->_offscreen_pass.frameBuffer, nullptr);
+    vkDestroyRenderPass(this->device, this->_offscreen_pass.renderPass, nullptr);
 
-    vkDestroySampler(this->device, this->offscreenPass.depthSampler, nullptr);
-    vkDestroyImageView(this->device, this->offscreenPass.depth.ImageView, nullptr);
-    vkDestroyImage(this->device, this->offscreenPass.depth.image, nullptr);
-    vkFreeMemory(this->device, this->offscreenPass.depth.memory, nullptr);
+    vkDestroySampler(this->device, this->_offscreen_pass.depthSampler, nullptr);
+    vkDestroyImageView(this->device, this->_offscreen_pass.depth.image_view, nullptr);
+    vkDestroyImage(this->device, this->_offscreen_pass.depth.image, nullptr);
+    vkFreeMemory(this->device, this->_offscreen_pass.depth.memory, nullptr);
 
     /* Destroy descriptor set layout which is bounding all of the descriptors. */
     vkDestroyDescriptorSetLayout(this->device, this->descriptorSetLayout, nullptr);

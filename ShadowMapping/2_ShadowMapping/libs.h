@@ -33,3 +33,4 @@
 
 #define DEPTH_FORMAT VK_FORMAT_D16_UNORM
 #define MAX_FRAMES_IN_FLIGHT 2
+#define MODEL_PATH "Models/bunny.obj"

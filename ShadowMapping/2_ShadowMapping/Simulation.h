@@ -118,16 +118,18 @@ public:
     GLFWwindow* _window;
 
     /* Handling Window Resize Explicity */
-    bool framebufferResized = false;
+    bool _framebufferResized = false;
 
     void run();
 
 private:
     /* Delta Time variables */
-    float currTime;
-    float dt;
-    float lastTime;
-
+    struct Time_Count {
+        float currTime;
+        float dt;
+        float lastTime;
+    } _time;
+    
     /* Camera Object */
     Camera cam01;
 
@@ -143,10 +145,6 @@ private:
         double mouseOffsetX;
         double mouseOffsetY;
     } _mouse_input;
-
-
-    /* Model Variables */
-    const std::string MODEL_PATH = "Models/bunny.obj";
     
     /* Available and enable API extensions */
     std::vector<const char*> validationLayers;
@@ -179,6 +177,30 @@ private:
 
     /* Descriptors Layout - all of the descriptors are combined into single descriptor set layout. */
     VkDescriptorSetLayout           descriptorSetLayout;
+
+    struct FrameBufferAttachment {
+        VkImage         image;
+        VkDeviceMemory  memory;
+        VkImageView     image_view;
+    };
+
+    struct OffscreenPass {
+        VkFramebuffer           frameBuffer;
+        FrameBufferAttachment   depth;
+        VkRenderPass            renderPass;
+        VkSampler               depthSampler;
+        VkDescriptorImageInfo   descriptor;
+    } _offscreen_pass;
+
+    struct ScenePass {
+        VkFramebuffer           frameBuffer;
+
+        /* Depth testing requires three resources- image, memory and image view. */
+        FrameBufferAttachment   depth;
+        VkRenderPass            render_pass;
+        VkSampler               depthSampler;
+        VkDescriptorImageInfo   descriptor;
+    } _scene_pass;
 
     /* Pipeline Layouts */
     VkRenderPass        renderPass;
@@ -224,28 +246,6 @@ private:
 
     /* Descriptor pool to hold descriptors set. */
     VkDescriptorPool descriptorPool;
-
-    /* Depth testing requires three resources- image, memory and image view. */
-    VkImage         depthImage;
-    VkDeviceMemory  depthImageMemory;
-    VkImageView     depthImageView;
-
- /* Offscreen Rendering */
-    struct FrameBufferAttachment {
-        VkImage         image;
-        VkDeviceMemory  memory;
-        VkImageView     ImageView;
-    };
-
-    struct OffscreenPass {
-        int32_t width;
-        int32_t height;
-        VkFramebuffer           frameBuffer;
-        FrameBufferAttachment   depth;
-        VkRenderPass            renderPass;
-        VkSampler               depthSampler;
-        VkDescriptorImageInfo   descriptor;
-    } offscreenPass;
 
     struct {
         VkBuffer                buffer = VK_NULL_HANDLE;
