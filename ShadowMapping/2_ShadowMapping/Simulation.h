@@ -112,10 +112,10 @@ public:
     Simulation( unsigned int windowHeight, unsigned int windowWidth, std::string windowName);
     ~Simulation();
 
-    unsigned int windowWidth;
-    unsigned int windowHeight;
-    std::string windowName;
-    GLFWwindow* window;
+    unsigned int _windowWidth;
+    unsigned int _windowHeight;
+    std::string _windowName;
+    GLFWwindow* _window;
 
     /* Handling Window Resize Explicity */
     bool framebufferResized = false;
@@ -132,22 +132,21 @@ private:
     Camera cam01;
 
     /* Mouse Input Variables */
-    bool firstMouse = true;
-    double lastMouseX;
-    double lastMouseY;
+    struct Mouse_Input {
+        bool firstMouse = true;
+        double lastMouseX;
+        double lastMouseY;
 
-    double mouseX;
-    double mouseY;
+        double mouseX;
+        double mouseY;
 
-    double mouseOffsetX;
-    double mouseOffsetY;
+        double mouseOffsetX;
+        double mouseOffsetY;
+    } _mouse_input;
+
 
     /* Model Variables */
     const std::string MODEL_PATH = "Models/bunny.obj";
-    const std::string TEXTURE_PATH = "Textures/chalet.jpg";
-
-    /* Quantity of frames */
-    const size_t MAX_FRAMES_IN_FLIGHT = 2;
     
     /* Available and enable API extensions */
     std::vector<const char*> validationLayers;
@@ -231,11 +230,55 @@ private:
     VkDeviceMemory  depthImageMemory;
     VkImageView     depthImageView;
 
-    /* Texture Variables */
-    VkImage         textureImage;
-    VkDeviceMemory  textureImageMemory;
-    VkImageView     textureImageView;
-    VkSampler       textureSampler;
+ /* Offscreen Rendering */
+    struct FrameBufferAttachment {
+        VkImage         image;
+        VkDeviceMemory  memory;
+        VkImageView     ImageView;
+    };
+
+    struct OffscreenPass {
+        int32_t width;
+        int32_t height;
+        VkFramebuffer           frameBuffer;
+        FrameBufferAttachment   depth;
+        VkRenderPass            renderPass;
+        VkSampler               depthSampler;
+        VkDescriptorImageInfo   descriptor;
+    } offscreenPass;
+
+    struct {
+        VkBuffer                buffer = VK_NULL_HANDLE;
+        VkDeviceMemory          memory = VK_NULL_HANDLE;
+        VkDescriptorBufferInfo  descriptor;
+        VkDeviceSize            size = 0;
+        VkDeviceSize            alignment = 0;
+        void*                   mapped = nullptr;
+
+        VkBufferUsageFlags      usageFlags;
+
+        VkMemoryPropertyFlags   memoryPropertyFlags;
+    } OffscreenBuffer;
+
+    struct UBOOffscreenVS {
+        glm::mat4 model;
+        glm::mat4 view;
+        glm::mat4 proj;
+    } uboOffscreenVS;
+
+    struct {
+        VkPipelineLayout offscreen;
+    } pipelineLayouts;
+
+    struct {
+        VkPipeline offscreen;
+    } pipelines;
+
+    struct {
+        VkDescriptorSet offscreen;
+        std::vector<VkDescriptorSet>    scene;
+    } descriptorSets;
+
 
     /* Light position and field of view. */
     glm::vec3 lightPos = glm::vec3(5.f, 5.f, 5.f);
@@ -262,8 +305,6 @@ private:
     void createDepthResources();
     void createFramebuffers();
     void createCommandPool();
-    void createTextureImage();
-    void createTextureImageView();
     void createTextureSamper();
     void loadModel();
     void createVertexBuffer();
@@ -322,54 +363,7 @@ private:
     void mainLoop();
     void cleanup();
 
-    /* Offscreen Rendering */
-    struct FrameBufferAttachment {
-        VkImage         image;
-        VkDeviceMemory  memory;
-        VkImageView     ImageView;
-    };
-    struct OffscreenPass {
-        int32_t width;
-        int32_t height;
-        VkFramebuffer           frameBuffer;
-        FrameBufferAttachment   depth;
-        VkRenderPass            renderPass;
-        VkSampler               depthSampler;
-        VkDescriptorImageInfo   descriptor;
-    } offscreenPass;
-
-    struct {
-        VkBuffer                buffer = VK_NULL_HANDLE;
-        VkDeviceMemory          memory = VK_NULL_HANDLE;
-        VkDescriptorBufferInfo  descriptor;
-        VkDeviceSize            size = 0;
-        VkDeviceSize            alignment = 0;
-        void*                   mapped = nullptr;
-
-        VkBufferUsageFlags      usageFlags;
-
-        VkMemoryPropertyFlags   memoryPropertyFlags;
-    } OffscreenBuffer;
-
-    struct UBOOffscreenVS {
-        glm::mat4 model;
-        glm::mat4 view;
-        glm::mat4 proj;
-    } uboOffscreenVS;
-
-    struct {
-        VkPipelineLayout offscreen;
-    } pipelineLayouts;
-
-    struct {
-        VkPipeline offscreen;
-    } pipelines;
-
-    struct {
-        VkDescriptorSet offscreen;
-        std::vector<VkDescriptorSet>    scene;
-    } descriptorSets;
-
+   
     void createOffscreenFramebuffer();
     void prepareOffscreenRenderPass();
 

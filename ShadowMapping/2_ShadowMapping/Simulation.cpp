@@ -21,7 +21,7 @@ static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
 // ------------------------------------
 
 Simulation::Simulation( unsigned int windowWidth, unsigned int windowHeight, std::string windowName)
-    : windowWidth(windowWidth), windowHeight(windowHeight), windowName(windowName),
+    : _windowWidth(windowWidth), _windowHeight(windowHeight), _windowName(windowName),
     cam01(glm::vec3(5.f, 8.f, 5.f), glm::vec3(-45.f, -135.f, 0.f), glm::vec3(0.f, 1.f, 0.f))
 {
     validationLayers.push_back("VK_LAYER_KHRONOS_validation");
@@ -44,8 +44,8 @@ void Simulation::run()
 
 void Simulation::initVulkan()
 {
-    this->offscreenPass.width   = windowWidth;
-    this->offscreenPass.height  = windowHeight;     /* TODO: Change to bigger shadow map resolution. */
+    this->offscreenPass.width   = _windowWidth;
+    this->offscreenPass.height  = _windowHeight;     /* TODO: Change to bigger shadow map resolution. */
 
     this->createInstance();
     this->createSurface();
@@ -59,8 +59,6 @@ void Simulation::initVulkan()
     this->createDepthResources();
     this->createFramebuffers();
     this->createCommandPool();
-    this->createTextureImage();
-    this->createTextureImageView();
     this->createTextureSamper();
     this->loadModel();
     this->createVertexBuffer();
@@ -715,145 +713,42 @@ void Simulation::createCommandPool()
         throw std::runtime_error("Failed to create command pool :( \n");
 }
 
-void Simulation::createTextureImage()
-{
-    /* Local Variables */
-    int texWidth    = 0;
-    int texHeight   = 0;
-    int texChannels = 0;
-
-    /* Load an image from file. */
-    stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-    
-    VkDeviceSize imageSize = texWidth * texHeight * 4;  /* 4 bytes per pixel- RGBA values */
-
-    if(!pixels)
-        throw std::runtime_error("Failed to load texture file: textures/texture.jpg :( \n");
-
-    /* Load image via staging buffer. */
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    
-    /* Crate staging buffer */
-    this->createBuffer(imageSize, 
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        stagingBuffer, 
-        stagingBufferMemory
-    );
-
-    /* Copy data directly to staging buffer. */
-    void* data;
-    if(vkMapMemory(this->device, stagingBufferMemory, 0, imageSize, 0, &data) != VK_SUCCESS )
-        throw std::runtime_error("Failed to map staging buffer memory. :( \n");
-    memcpy(data, pixels, static_cast<uint32_t>(imageSize));
-    vkUnmapMemory(this->device, stagingBufferMemory);
-
-    /* Free stbi image data */
-    stbi_image_free(pixels);
-
-    /* Create object to hold image data. */
-    this->createImage(texWidth, 
-        texHeight, 
-        VK_FORMAT_R8G8B8A8_SRGB, 
-        VK_IMAGE_TILING_OPTIMAL, 
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-        this->textureImage, 
-        this->textureImageMemory
-    );
-
-    /* Copy staging buffer to created texture image.
-    *   1. Transition the texture image to VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (it was created with undefined layout)
-    *   2. Execute the buffer to image copy operation.
-    *   3. Transition image to SHADER_READ_ONLY_OPTIMAL layout to prepare it for shader access.
-    *   TODO: Combine these operations in single command buffer and execute them asynchronously.
-    *       Create setupCommandBuffer to record commands into.
-    *       Execute commands with flushSetupCommands() that have been recorded so far. 
-    */
-    this->transitionImageLayout(this->textureImage, 
-        VK_FORMAT_R8G8B8A8_SRGB, 
-        VK_IMAGE_LAYOUT_UNDEFINED, 
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-    );
-    
-    this->copyBufferToImage(stagingBuffer, 
-        this->textureImage,
-        static_cast<uint32_t>(texWidth),
-        static_cast<uint32_t>(texHeight)
-    );
-
-    this->transitionImageLayout(this->textureImage,
-        VK_FORMAT_R8G8B8A8_SRGB,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    );
-
-    /* Free staging buffer resources. */
-    vkDestroyBuffer(this->device, stagingBuffer, nullptr);
-    vkFreeMemory(this->device, stagingBufferMemory, nullptr);
-}
-
-void Simulation::createTextureImageView()
-{
-    /* Images are accessed through image views rather than directly. Thus we have to create one for texture image. */
-    this->textureImageView = this->createImageView(this->textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
-}
-
 void Simulation::createTextureSamper()
 {
-    /* Samplers are user to read texels. They can apply filtering and other transformations to compute final color that is retrieved from sampler. */
-    VkSamplerCreateInfo samplerInfo = {};
-    samplerInfo.sType   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    
-    samplerInfo.magFilter   = VK_FILTER_LINEAR;     /* Describes how to interpolate texels that are magnified. */
-    samplerInfo.minFilter   = VK_FILTER_LINEAR;     /* Describes how to interpolate texels that are minified. */
-    
-    /* U/V/W are axes instead of X/Y/Z. Describes how to access texels while they outside the texture dimensions. */
-    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;  /* Repeat the texture when going beyond the image dimensions. */
-    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-
-    /* Describing Anisotropic Filtering. */
-    samplerInfo.anisotropyEnable    = VK_TRUE;
-    samplerInfo.maxAnisotropy       = 16;       /* Lower value = lower quality but better performance. */
-
-    /* Describing which color to use if clamp to border addressing mode is used. */
-    samplerInfo.borderColor =   VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-
-    /* Describing texture coordinate system. Normalized are [0;1] */
-    samplerInfo.unnormalizedCoordinates =   VK_FALSE;
-
-    /* Describe way to compare texel value to other values. Mainly used for percentage-closer filtering. */
-    samplerInfo.compareEnable   = VK_FALSE;
-    samplerInfo.compareOp       = VK_COMPARE_OP_ALWAYS;
-    
-    /* Specify mipmapping characteristics. */
-    samplerInfo.mipmapMode  = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    samplerInfo.mipLodBias  = 0.f;
-    samplerInfo.minLod      = 0.f;
-    samplerInfo.maxLod      = 0.f;
-
-    /* Image Sampler do not refer VkImage object anywhere. It is distinct object that provide interface to extract color from texture. */
-    if(vkCreateSampler(this->device, &samplerInfo, nullptr, &this->textureSampler) != VK_SUCCESS )
-        throw std::runtime_error("Failed to create texture sampler! :( \n");
-
     /* Offscreen depth map sampler */
+    /* Samplers are user to read texels. They can apply filtering and other transformations to compute final color that is retrieved from sampler. */
     VkSamplerCreateInfo depthSamplerInfo = {};
     depthSamplerInfo.sType   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    depthSamplerInfo.magFilter   = VK_FILTER_LINEAR;
-    depthSamplerInfo.minFilter   = VK_FILTER_LINEAR;
+    depthSamplerInfo.magFilter   = VK_FILTER_LINEAR;    /* Describes how to interpolate texels that are magnified. */
+    depthSamplerInfo.minFilter   = VK_FILTER_LINEAR;    /* Describes how to interpolate texels that are minified. */
+
+    /* U/V/W are axes instead of X/Y/Z. Describes how to access texels while they outside the texture dimensions. */
     depthSamplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     depthSamplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     depthSamplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    depthSamplerInfo.maxAnisotropy = 1.f;
+
+    /* Describing Anisotropic Filtering. */
+    depthSamplerInfo.anisotropyEnable    = VK_TRUE;
+    depthSamplerInfo.maxAnisotropy = 16.f;
+
+    /* Describing which color to use if clamp to border addressing mode is used. */
     depthSamplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+
+    /* Describing texture coordinate system. Normalized are [0;1] */
+    depthSamplerInfo.unnormalizedCoordinates =   VK_FALSE;
+
+    /* Describe way to compare texel value to other values. Mainly used for percentage-closer filtering. */
+    depthSamplerInfo.compareEnable   = VK_FALSE;
+    depthSamplerInfo.compareOp       = VK_COMPARE_OP_ALWAYS;
+
+    /* Specify mipmapping characteristics. */
     depthSamplerInfo.mipmapMode  = VK_SAMPLER_MIPMAP_MODE_LINEAR;
     depthSamplerInfo.mipLodBias  = 0.f;
     depthSamplerInfo.minLod      = 0.f;
     depthSamplerInfo.maxLod      = 1.f;
     
-    if(vkCreateSampler(this->device, &samplerInfo, nullptr, &this->offscreenPass.depthSampler) != VK_SUCCESS )
+    /* Image Sampler do not refer VkImage object anywhere. It is distinct object that provide interface to extract color from texture. */
+    if(vkCreateSampler(this->device, &depthSamplerInfo, nullptr, &this->offscreenPass.depthSampler) != VK_SUCCESS )
         throw std::runtime_error("Failed to create offscreen texture sampler! :( \n");
 }
 
@@ -1446,7 +1341,7 @@ void Simulation::createSyncObjects()
 
 void Simulation::createSurface()
 {
-    if( glfwCreateWindowSurface(this->instance, this->window, nullptr, &this->surface) != VK_SUCCESS)
+    if( glfwCreateWindowSurface(this->instance, _window, nullptr, &this->surface) != VK_SUCCESS)
     {
         throw new std::runtime_error("Failed to create window surface!");
     }
@@ -1593,7 +1488,7 @@ VkExtent2D Simulation::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabili
     {
         int width;
         int height;
-        glfwGetFramebufferSize(this->window, &width, &height);
+        glfwGetFramebufferSize(_window, &width, &height);
 
         VkExtent2D actualExtent = {
             static_cast<uint32_t>(width), 
@@ -1601,7 +1496,7 @@ VkExtent2D Simulation::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabili
         };
 
         /* 
-         * Clamp values of 'this->windowWidth' and 'this->windowHeight' between 
+         * Clamp values of '_windowWidth' and 'this->windowHeight' between 
          * allowed min and max extents supported by the implementation. 
          */
         actualExtent.width = std::max( capabilities.minImageExtent.width, 
@@ -1772,7 +1667,7 @@ void Simulation::updateVariables(uint32_t imageIndex)
     this->updateMouseInput();
 
     /* According to mouse offset values update camera pitch/yaw/roll */
-    this->cam01.updateMouseInput(this->dt, this->mouseOffsetX, this->mouseOffsetY);
+    this->cam01.updateMouseInput(this->dt, _mouse_input.mouseOffsetX, _mouse_input.mouseOffsetY);
 
     /* Check keyboard input. */
     this->updateKeyboardInput();
@@ -1848,55 +1743,55 @@ void Simulation::updateOffscreenBuffer()
 void Simulation::updateKeyboardInput()
 {
     // Application
-    if( glfwGetKey( this->window, GLFW_KEY_ESCAPE ) == GLFW_PRESS )
+    if( glfwGetKey( _window, GLFW_KEY_ESCAPE ) == GLFW_PRESS )
     {
-        glfwSetWindowShouldClose(this->window, GLFW_TRUE);
+        glfwSetWindowShouldClose(_window, GLFW_TRUE);
     }
 
     // Camera
-    if( glfwGetKey( this->window, GLFW_KEY_W ) == GLFW_PRESS )
+    if( glfwGetKey( _window, GLFW_KEY_W ) == GLFW_PRESS )
     {
         this->cam01.move(this->dt, FORWARD);
     }
 
-    if( glfwGetKey( this->window, GLFW_KEY_S ) == GLFW_PRESS )
+    if( glfwGetKey( _window, GLFW_KEY_S ) == GLFW_PRESS )
     {
         this->cam01.move(this->dt, BACKWARD);
     }
 
-    if( glfwGetKey( this->window, GLFW_KEY_A ) == GLFW_PRESS )
+    if( glfwGetKey( _window, GLFW_KEY_A ) == GLFW_PRESS )
     {
         this->cam01.move(this->dt, LEFT);
     }
 
-    if( glfwGetKey( this->window, GLFW_KEY_D ) == GLFW_PRESS )
+    if( glfwGetKey( _window, GLFW_KEY_D ) == GLFW_PRESS )
     {
         this->cam01.move(this->dt, RIGTH);
     }
 
-    if( glfwGetKey( this->window, GLFW_KEY_SPACE ) == GLFW_PRESS )
+    if( glfwGetKey( _window, GLFW_KEY_SPACE ) == GLFW_PRESS )
     {
         this->cam01.move(this->dt, UPWARD);
     }
 
-    if( glfwGetKey( this->window, GLFW_KEY_C ) == GLFW_PRESS )
+    if( glfwGetKey( _window, GLFW_KEY_C ) == GLFW_PRESS )
     {
         this->cam01.move(this->dt, DOWNWARD);
     }
 
 
 
-    if( glfwGetKey( this->window, GLFW_KEY_UP ) == GLFW_PRESS )
+    if( glfwGetKey( _window, GLFW_KEY_UP ) == GLFW_PRESS )
     {
         this->lightPos.x += 0.1f;
     }
 
-    if( glfwGetKey( this->window, GLFW_KEY_DOWN ) == GLFW_PRESS )
+    if( glfwGetKey( _window, GLFW_KEY_DOWN ) == GLFW_PRESS )
     {
         this->lightPos.y -= 0.1f;
     }
 
-    if( glfwGetKey( this->window, GLFW_KEY_LEFT ) == GLFW_PRESS )
+    if( glfwGetKey( _window, GLFW_KEY_LEFT ) == GLFW_PRESS )
     {
         this->lightPos.z += 0.1f;
     }
@@ -1905,22 +1800,22 @@ void Simulation::updateKeyboardInput()
 
 void Simulation::updateMouseInput()
 {
-    glfwGetCursorPos(this->window, &this->mouseX, &this->mouseY);
+    glfwGetCursorPos(_window, &_mouse_input.mouseX, &_mouse_input.mouseY);
 
-    if(this->firstMouse)
+    if(_mouse_input.firstMouse)
     {
-        this->lastMouseX = this->mouseX;
-        this->lastMouseY = this->mouseY;
-        this->firstMouse = false;
+        _mouse_input.lastMouseX = _mouse_input.mouseX;
+        _mouse_input.lastMouseY = _mouse_input.mouseY;
+        _mouse_input.firstMouse = false;
     }
 
     /* Calculate mouse move offset */
-    this->mouseOffsetX  = this->mouseX - this->lastMouseX;
-    this->mouseOffsetY  = this->mouseY - this->lastMouseY;
+    _mouse_input.mouseOffsetX  = _mouse_input.mouseX - _mouse_input.lastMouseX;
+    _mouse_input.mouseOffsetY  = _mouse_input.mouseY - _mouse_input.lastMouseY;
 
     /* Set last X and Y values. */
-    this->lastMouseX    = this->mouseX;
-    this->lastMouseY    = this->mouseY;
+    _mouse_input.lastMouseX    = _mouse_input.mouseX;
+    _mouse_input.lastMouseY    = _mouse_input.mouseY;
 }
 
 void Simulation::updateLight()
@@ -2041,12 +1936,12 @@ void Simulation::recreateSwapChain()
     int width;
     int height;
     
-    glfwGetFramebufferSize(this->window, &width, &height);
+    glfwGetFramebufferSize(_window, &width, &height);
 
     /* Wait till window is returned to foreground. */
     while( width == 0 || height == 0 )
     {
-        glfwGetFramebufferSize(this->window, &width, &height);
+        glfwGetFramebufferSize(_window, &width, &height);
         glfwWaitEvents();
     }
 
@@ -2110,13 +2005,13 @@ void Simulation::initWindow()
 {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
-    this->window = glfwCreateWindow(static_cast<int>(this->windowWidth), 
-        static_cast<int>(this->windowHeight), 
-        this->windowName.c_str(), 
+    _window = glfwCreateWindow(static_cast<int>(_windowWidth), 
+        static_cast<int>(_windowHeight), 
+        _windowName.c_str(), 
         nullptr, 
         nullptr);
 
-    if( this->window == nullptr)
+    if( _window == nullptr)
     {
         std::cout << "ERROR::GLFW_WINDOW_INIT_FAILED  \n";
         glfwTerminate();
@@ -2125,11 +2020,11 @@ void Simulation::initWindow()
     /*
     * Set pointer to GLFWwindow inside callbacks functions.
     */
-    glfwSetWindowUserPointer(this->window, this);
-    glfwSetFramebufferSizeCallback(this->window, framebufferResizeCallback);
+    glfwSetWindowUserPointer(_window, this);
+    glfwSetFramebufferSizeCallback(_window, framebufferResizeCallback);
 
     /* Capture cursor as input mode. */
-    glfwSetInputMode(this->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
 bool Simulation::checkValidationLayerSupport()
@@ -2281,7 +2176,7 @@ void Simulation::drawFrame()
 
 void Simulation::mainLoop()
 {
-    while(!glfwWindowShouldClose(window)) 
+    while(!glfwWindowShouldClose(_window)) 
     {
         glfwPollEvents();
         drawFrame();
@@ -2308,12 +2203,6 @@ void Simulation::cleanup()
     vkDestroyImage(this->device, this->offscreenPass.depth.image, nullptr);
     vkFreeMemory(this->device, this->offscreenPass.depth.memory, nullptr);
 
-    /* Destroy and free memory for texture image. */
-    vkDestroySampler(this->device, this->textureSampler, nullptr);
-    vkDestroyImageView(this->device, this->textureImageView, nullptr);
-    vkDestroyImage(this->device, this->textureImage, nullptr);
-    vkFreeMemory(this->device, this->textureImageMemory, nullptr);
-
     /* Destroy descriptor set layout which is bounding all of the descriptors. */
     vkDestroyDescriptorSetLayout(this->device, this->descriptorSetLayout, nullptr);
 
@@ -2339,6 +2228,6 @@ void Simulation::cleanup()
     vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
     vkDestroyInstance(this->instance, nullptr);
 
-    glfwDestroyWindow(this->window);
+    glfwDestroyWindow(_window);
     glfwTerminate();
 }
