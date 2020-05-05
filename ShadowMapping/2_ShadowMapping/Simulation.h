@@ -160,14 +160,14 @@ private:
     std::vector<const char*> device_extensions;
 
     /* Instance */
-    VkInstance instance = nullptr;
+    VkInstance _instance = nullptr;
 
     /* Surface */
-    VkSurfaceKHR surface = 0;
+    VkSurfaceKHR _surface = 0;
 
     /* Device */
-    VkPhysicalDevice    physical_device = VK_NULL_HANDLE;
-    VkDevice            device          = nullptr;
+    VkPhysicalDevice    _physical_device = VK_NULL_HANDLE;
+    VkDevice            _device          = nullptr;
 
     /* Current used frame */
     size_t _currentFrame = 0;
