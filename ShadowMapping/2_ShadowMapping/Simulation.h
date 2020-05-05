@@ -333,44 +333,45 @@ private:
     void load_model();
 
     /* Auxiliary Functions */
-    bool                    checkValidationLayerSupport();
-    bool                    isDeviceSuitable( VkPhysicalDevice device );
+    bool                    check_validatio_layer_support();
+    bool                    is_device_suitable( VkPhysicalDevice device );
 
-    QueueFamilyIndices      findQueueFamilies(VkPhysicalDevice device);
-    uint32_t                findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-    VkFormat                findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-    VkFormat                findDepthFormat();
-    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
-    VkSurfaceFormatKHR      chooseSwapSurfaceFormat( const std::vector<VkSurfaceFormatKHR>& availableFormats );
-    VkPresentModeKHR        chooseSwapPresentMode( const std::vector<VkPresentModeKHR>& availablePresentModes );
-    VkExtent2D              chooseSwapExtent( const VkSurfaceCapabilitiesKHR& capabilities );
+    QueueFamilyIndices      find_queue_families(VkPhysicalDevice device);
+    uint32_t                find_memory_type(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+    VkFormat                find_supported_format(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+    VkFormat                find_depth_format();
+    SwapChainSupportDetails query_swap_chain_support(VkPhysicalDevice device);
+    VkSurfaceFormatKHR      choose_swap_surface_format( const std::vector<VkSurfaceFormatKHR>& availableFormats );
+    VkPresentModeKHR        choose_swap_present_mode( const std::vector<VkPresentModeKHR>& availablePresentModes );
+    VkExtent2D              choose_swap_extent( const VkSurfaceCapabilitiesKHR& capabilities );
 
-    VkShaderModule          createShaderModule( const std::vector<char>& code );
-    void                    createBuffer(VkDeviceSize deviceSize, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-    void                    createImage(uint32_t width, uint32_t height, VkFormat imageFormat, VkImageTiling imgTiling, VkImageUsageFlags imgFlags, 
+    VkShaderModule          creates_shader_module( const std::vector<char>& code );
+    void                    create_buffer(VkDeviceSize deviceSize, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+    void                    create_image(uint32_t width, uint32_t height, VkFormat imageFormat, VkImageTiling imgTiling, VkImageUsageFlags imgFlags, 
                                 VkMemoryPropertyFlags imgMemoryProperties, VkImage& image, VkDeviceMemory& imgMemory);
-    VkImageView             createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+    VkImageView             create_image_view(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 
-    void                    copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
-    void                    copyBufferToImage( VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+    void                    copy_buffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+    void                    copy_buffer_to_image( VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
     void                    add_quad_under_model(float minY, int count, float quad_coord);
 
-    void                    updateVariables(uint32_t imageIndex);
-    void                    updateDT();
-    void                    updateUniformBuffer(uint32_t currentImage);
-    void                    updateOffscreenBuffer();
-    void                    updateKeyboardInput();
-    void                    updateMouseInput();
-    void                    updateLight();
-    void                    transitionImageLayout(VkImage image, VkFormat format,
+    void                    update_variables(uint32_t imageIndex);
+    void                    update_DT();
+    void                    update_scene_uniform_buf(uint32_t currentImage);
+    void                    update_offscreen_uniform_buf();
+    void                    update_keyboard_input();
+    void                    update_mouse_input();
+    void                    update_light();
+
+    void                    transition_image_layout(VkImage image, VkFormat format,
                                 VkImageLayout oldLayout, VkImageLayout newLayout);
 
-    VkCommandBuffer         beganSingleTimeCommands();
-    void                    endSingleTimeCommands(VkCommandBuffer commandBuffer);
+    VkCommandBuffer         began_single_time_commands();
+    void                    end_single_time_commands(VkCommandBuffer commandBuffer);
 
-    void recreateSwapChain();
-    void cleanupSwapChain();
+    void recreate_swap_chain();
+    void cleanup_swap_chain();
 
     /* Drawing */
     void draw_frame();
@@ -379,7 +380,7 @@ private:
     void cleanup();
 };
 
-static std::vector<char> readFile( const std::string& filename )
+static std::vector<char> read_file( const std::string& filename )
 {
     /* 
      * ate - Start reading from the end of file

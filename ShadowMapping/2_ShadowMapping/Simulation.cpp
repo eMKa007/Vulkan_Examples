@@ -67,7 +67,7 @@ void Simulation::init_vulkan()
 
 void Simulation::create_instance()
 {
-    if (enableValidationLayers && !checkValidationLayerSupport())
+    if (enableValidationLayers && !check_validatio_layer_support())
             throw std::runtime_error("validation layers requested, but not available!");
 
     VkApplicationInfo appInfo = {};
@@ -119,7 +119,7 @@ void Simulation::pick_physical_device()
 
     for (const auto& element : devices)
     {
-        if( isDeviceSuitable(element) )
+        if( is_device_suitable(element) )
         {    physicalDevice = element;
             break;
         }
@@ -131,7 +131,7 @@ void Simulation::pick_physical_device()
 
 void Simulation::create_logical_device()
 {
-    QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+    QueueFamilyIndices indices = find_queue_families(physicalDevice);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
@@ -200,11 +200,11 @@ bool Simulation::check_device_extension_support(VkPhysicalDevice device)
 
 void Simulation::create_swap_chain()
 {
-    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice);
+    SwapChainSupportDetails swapChainSupport = query_swap_chain_support(physicalDevice);
 
-    VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat( swapChainSupport.formats );
-    VkPresentModeKHR presentMode = chooseSwapPresentMode( swapChainSupport.presentModes );
-    VkExtent2D extent = chooseSwapExtent( swapChainSupport.capabilities );
+    VkSurfaceFormatKHR surfaceFormat = choose_swap_surface_format( swapChainSupport.formats );
+    VkPresentModeKHR presentMode = choose_swap_present_mode( swapChainSupport.presentModes );
+    VkExtent2D extent = choose_swap_extent( swapChainSupport.capabilities );
 
     /* 
      * Decide how many images do we need in the swap chain 
@@ -227,7 +227,7 @@ void Simulation::create_swap_chain()
      * We'll be drawing on the images in the swap chain 
      * from the graphics queue and then submitting them on the presentation queue. 
      */
-    QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+    QueueFamilyIndices indices = find_queue_families(physicalDevice);
     uint32_t queueFamilyIndices[] { indices.graphicsFamily.value(), indices.presentFamily.value() };
 
     if( indices.graphicsFamily != indices.presentFamily)
@@ -285,7 +285,7 @@ void Simulation::create_image_views()
      * Loop through all images to create image view for every of them.
      */
     for ( unsigned int i = 0; i < _swap_chain.swapChainImages.size(); i++)
-        _swap_chain.swapChainImageViews[i] = createImageView(_swap_chain.swapChainImages[i], _swap_chain.swap_chain_image_format, VK_IMAGE_ASPECT_COLOR_BIT);
+        _swap_chain.swapChainImageViews[i] = create_image_view(_swap_chain.swapChainImages[i], _swap_chain.swap_chain_image_format, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 void Simulation::create_scene_render_pass()
@@ -382,8 +382,8 @@ void Simulation::create_descriptor_set_layout()
 
 void Simulation::create_graphics_pipeline()
 {
-    VkShaderModule vertShaderModule = createShaderModule(readFile(VERT_SHADER));
-    VkShaderModule fragShaderModule = createShaderModule(readFile(FRAG_SHADER));
+    VkShaderModule vertShaderModule = creates_shader_module(read_file(VERT_SHADER));
+    VkShaderModule fragShaderModule = creates_shader_module(read_file(FRAG_SHADER));
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -555,7 +555,7 @@ void Simulation::create_graphics_pipeline()
         throw std::runtime_error("Failed to create Graphics Pipeline! :( \n");
 
     /* Offscreen Pipeline - vertex shader only */
-    vertShaderStageInfo.module = createShaderModule(readFile(OFFSCREEN_VERT_SHADER));
+    vertShaderStageInfo.module = creates_shader_module(read_file(OFFSCREEN_VERT_SHADER));
     shaderStages[0] = vertShaderStageInfo;
 
     pipelineInfo.stageCount = 1;
@@ -675,7 +675,7 @@ void Simulation::create_offscreen_render_pass()
 
 void Simulation::create_command_pool()
 {
-    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice);
+    QueueFamilyIndices queueFamilyIndices = find_queue_families(physicalDevice);
 
     VkCommandPoolCreateInfo poolInfo = {};
     poolInfo.sType  = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -834,7 +834,7 @@ void Simulation::add_quad_under_model(float minY, int count, float quad_coord)
 void Simulation::create_depth_resources()
 {
     /* Create vkImage object with given properties */
-    createImage(_swap_chain.swap_chain_extent.width,
+    create_image(_swap_chain.swap_chain_extent.width,
             _swap_chain.swap_chain_extent.height,
             DEPTH_FORMAT,
             VK_IMAGE_TILING_OPTIMAL,
@@ -845,13 +845,13 @@ void Simulation::create_depth_resources()
         );
     
     /* Crate Image view bound to previously created depth image */
-    _scene_pass.depth.image_view = createImageView(_scene_pass.depth.image, 
+    _scene_pass.depth.image_view = create_image_view(_scene_pass.depth.image, 
         DEPTH_FORMAT, 
         VK_IMAGE_ASPECT_DEPTH_BIT
     );
 
     /* Create Image for depth map. Offscreen */
-    createImage(_windowWidth, 
+    create_image(_windowWidth, 
         _windowHeight, 
         DEPTH_FORMAT, 
         VK_IMAGE_TILING_OPTIMAL, 
@@ -862,7 +862,7 @@ void Simulation::create_depth_resources()
     );
 
     /* Crate Image View for crated depth image. Offscreen */
-    _offscreen_pass.depth.image_view = createImageView(_offscreen_pass.depth.image,
+    _offscreen_pass.depth.image_view = create_image_view(_offscreen_pass.depth.image,
         DEPTH_FORMAT,
         VK_IMAGE_ASPECT_DEPTH_BIT
     );
@@ -876,7 +876,7 @@ void Simulation::create_vertex_buffer()
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
 
-    createBuffer(bufferSize, 
+    create_buffer(bufferSize, 
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         stagingBuffer,
@@ -894,14 +894,14 @@ void Simulation::create_vertex_buffer()
     vkUnmapMemory(device, stagingBufferMemory);
 
     /* Create Vertex Buffer on GPU */
-    createBuffer(bufferSize, 
+    create_buffer(bufferSize, 
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         _vertex_buffer,
         _vertex_buffer_memory);
 
     /* Copy data from staging buffer to high performance memory on GPU */
-    copyBuffer(stagingBuffer, _vertex_buffer, bufferSize);
+    copy_buffer(stagingBuffer, _vertex_buffer, bufferSize);
 
     /* Clean up resources */
     vkDestroyBuffer(device, stagingBuffer, nullptr);
@@ -917,7 +917,7 @@ void Simulation::create_index_buffer()
     VkDeviceMemory stagingBufferMemory;
 
     /* Create buffer for storing indices data. */
-    createBuffer(bufferSize,
+    create_buffer(bufferSize,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         stagingBuffer,
@@ -935,14 +935,14 @@ void Simulation::create_index_buffer()
     vkUnmapMemory(device, stagingBufferMemory);
 
     /* Create buffer to hold indices data on GPU. */
-    createBuffer(bufferSize,
+    create_buffer(bufferSize,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         _index_buffer,
         _index_buffer_memory);
 
     /* Copy data to GPU indices buffer */
-    copyBuffer(stagingBuffer, _index_buffer, bufferSize);
+    copy_buffer(stagingBuffer, _index_buffer, bufferSize);
 
     /* Free resources */
     vkDestroyBuffer(device, stagingBuffer, nullptr);
@@ -960,7 +960,7 @@ void Simulation::create_uniform_buffers()
     /* Create Buffer for every of uniformBuffer array member */
     for( size_t i = 0; i<_swap_chain.swapChainImages.size(); i++)
     {
-        createBuffer(bufferSize,
+        create_buffer(bufferSize,
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             _scene_uniform_buffers[i],
@@ -974,7 +974,7 @@ void Simulation::create_uniform_buffers()
     _offscreen_buffer.memoryPropertyFlags   = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     
     /* Create Buffer for offscreen rendering */
-    createBuffer(_offscreen_buffer.size,
+    create_buffer(_offscreen_buffer.size,
         _offscreen_buffer.usageFlags,
         _offscreen_buffer.memoryPropertyFlags,
         _offscreen_buffer.buffer,
@@ -1293,7 +1293,7 @@ void Simulation::create_surface()
 
 }
 
-QueueFamilyIndices Simulation::findQueueFamilies(VkPhysicalDevice device)
+QueueFamilyIndices Simulation::find_queue_families(VkPhysicalDevice device)
 {
     QueueFamilyIndices indices;
 
@@ -1323,7 +1323,7 @@ QueueFamilyIndices Simulation::findQueueFamilies(VkPhysicalDevice device)
     return indices;
 }
 
-uint32_t Simulation::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+uint32_t Simulation::find_memory_type(uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
@@ -1343,7 +1343,7 @@ uint32_t Simulation::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags p
     throw std::runtime_error("Failed to find suitable memory type. :( \n");
 }
 
-VkFormat Simulation::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
+VkFormat Simulation::find_supported_format(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
 {
     for( VkFormat format : candidates )
     {
@@ -1364,16 +1364,16 @@ VkFormat Simulation::findSupportedFormat(const std::vector<VkFormat>& candidates
     throw std::runtime_error("Failed to find supported format! :( \n");
 }
 
-VkFormat Simulation::findDepthFormat()
+VkFormat Simulation::find_depth_format()
 {
-    return findSupportedFormat( 
+    return find_supported_format( 
                     {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
                     VK_IMAGE_TILING_OPTIMAL,
                     VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
                 );
 }
 
-SwapChainSupportDetails Simulation::querySwapChainSupport(VkPhysicalDevice device)
+SwapChainSupportDetails Simulation::query_swap_chain_support(VkPhysicalDevice device)
 {
     SwapChainSupportDetails details;
 
@@ -1400,7 +1400,7 @@ SwapChainSupportDetails Simulation::querySwapChainSupport(VkPhysicalDevice devic
     return details;
 }
 
-VkSurfaceFormatKHR Simulation::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
+VkSurfaceFormatKHR Simulation::choose_swap_surface_format(const std::vector<VkSurfaceFormatKHR>& availableFormats)
 {
     for( const auto& availableFomrat : availableFormats )
     {
@@ -1414,7 +1414,7 @@ VkSurfaceFormatKHR Simulation::chooseSwapSurfaceFormat(const std::vector<VkSurfa
     return availableFormats[0];
 }
 
-VkPresentModeKHR Simulation::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
+VkPresentModeKHR Simulation::choose_swap_present_mode(const std::vector<VkPresentModeKHR>& availablePresentModes)
 {
     for( const auto& availablePresentMode : availablePresentModes )
     {
@@ -1425,7 +1425,7 @@ VkPresentModeKHR Simulation::chooseSwapPresentMode(const std::vector<VkPresentMo
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D Simulation::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
+VkExtent2D Simulation::choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities)
 {
     if( capabilities.currentExtent.width != UINT32_MAX )
         return capabilities.currentExtent;
@@ -1454,7 +1454,7 @@ VkExtent2D Simulation::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabili
     }
 }
 
-VkShaderModule Simulation::createShaderModule(const std::vector<char>& code)
+VkShaderModule Simulation::creates_shader_module(const std::vector<char>& code)
 {
     VkShaderModuleCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -1468,7 +1468,7 @@ VkShaderModule Simulation::createShaderModule(const std::vector<char>& code)
     return shaderModule;
 }
 
-void Simulation::createBuffer(VkDeviceSize deviceSize, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer & buffer, VkDeviceMemory & bufferMemory)
+void Simulation::create_buffer(VkDeviceSize deviceSize, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer & buffer, VkDeviceMemory & bufferMemory)
 {
     /* Specify memory desired type and size */
     VkBufferCreateInfo bufferInfo = {};
@@ -1487,7 +1487,7 @@ void Simulation::createBuffer(VkDeviceSize deviceSize, VkBufferUsageFlags usage,
     VkMemoryAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize    = memRequirements.size;
-    allocInfo.memoryTypeIndex   = findMemoryType(memRequirements.memoryTypeBits, properties ); // Mapped memory always matches the contents of the allocated memory.
+    allocInfo.memoryTypeIndex   = find_memory_type(memRequirements.memoryTypeBits, properties ); // Mapped memory always matches the contents of the allocated memory.
  
     if(vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory))
         throw std::runtime_error("Failed to allocate vertex buffer memory! :( \n");
@@ -1496,7 +1496,7 @@ void Simulation::createBuffer(VkDeviceSize deviceSize, VkBufferUsageFlags usage,
     vkBindBufferMemory(device, buffer, bufferMemory, 0);
 }
 
-void Simulation::createImage(uint32_t width, uint32_t height, VkFormat imageFormat, VkImageTiling imgTiling, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags imgMemoryProperties, VkImage & image, VkDeviceMemory & imgMemory)
+void Simulation::create_image(uint32_t width, uint32_t height, VkFormat imageFormat, VkImageTiling imgTiling, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags imgMemoryProperties, VkImage & image, VkDeviceMemory & imgMemory)
 {
     /* Create object to hold image data. */
     VkImageCreateInfo imageInfo = {};
@@ -1529,7 +1529,7 @@ void Simulation::createImage(uint32_t width, uint32_t height, VkFormat imageForm
     VkMemoryAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize    = memRequirements.size;
-    allocInfo.memoryTypeIndex   = findMemoryType(memRequirements.memoryTypeBits, imgMemoryProperties);
+    allocInfo.memoryTypeIndex   = find_memory_type(memRequirements.memoryTypeBits, imgMemoryProperties);
 
     if(vkAllocateMemory(device, &allocInfo, nullptr, &imgMemory) != VK_SUCCESS )
         throw std::runtime_error("Failed to allocate image memory. :( \n");
@@ -1538,7 +1538,7 @@ void Simulation::createImage(uint32_t width, uint32_t height, VkFormat imageForm
     vkBindImageMemory(device, image, imgMemory, 0);
 }
 
-VkImageView Simulation::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
+VkImageView Simulation::create_image_view(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
 {
     VkImageViewCreateInfo viewInfo = {};
     viewInfo.sType  = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -1558,10 +1558,10 @@ VkImageView Simulation::createImageView(VkImage image, VkFormat format, VkImageA
     return imageView;
 }
 
-void Simulation::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
+void Simulation::copy_buffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
     /* Begin recording command buffer */
-    VkCommandBuffer commandBuffer = beganSingleTimeCommands();
+    VkCommandBuffer commandBuffer = began_single_time_commands();
 
     /* Provide information about regions to copy from and to. Call CopyBuffer command. */
     VkBufferCopy copyRegion = {};
@@ -1571,12 +1571,12 @@ void Simulation::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize
     vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
     /* End commands recording. */
-    endSingleTimeCommands(commandBuffer);
+    end_single_time_commands(commandBuffer);
 }
 
-void Simulation::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
+void Simulation::copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
 {
-    VkCommandBuffer commandBuffer = beganSingleTimeCommands();
+    VkCommandBuffer commandBuffer = began_single_time_commands();
     
     /* Specify which part of the buffer is going to be copied to which part of the image */
     VkBufferImageCopy region = {};
@@ -1600,41 +1600,41 @@ void Simulation::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t widt
         &region
     );
 
-    endSingleTimeCommands(commandBuffer);
+    end_single_time_commands(commandBuffer);
 }
 
-void Simulation::updateVariables(uint32_t imageIndex)
+void Simulation::update_variables(uint32_t imageIndex)
 {
     /* Update Time information */
-    updateDT();
+    update_DT();
 
     /* Update mouse move variables */
-    updateMouseInput();
+    update_mouse_input();
 
     /* According to mouse offset values update camera pitch/yaw/roll */
     cam01.updateMouseInput(_time.dt, _mouse_input.mouseOffsetX, _mouse_input.mouseOffsetY);
 
     /* Check keyboard input. */
-    updateKeyboardInput();
+    update_keyboard_input();
 
     /* Update light position */
-    updateLight();
+    update_light();
 
     /* Update offscreen uniform buffer */
-    updateOffscreenBuffer();
+    update_offscreen_uniform_buf();
 
     /* With information about current image we can update its uniform buffer. */
-    updateUniformBuffer(imageIndex);
+    update_scene_uniform_buf(imageIndex);
 }
 
-void Simulation::updateDT()
+void Simulation::update_DT()
 {
     _time.currTime = static_cast<float>(glfwGetTime());
     _time.dt = _time.currTime - _time.lastTime;
     _time.lastTime = _time.currTime;
 }
 
-void Simulation::updateUniformBuffer(uint32_t currentImage)
+void Simulation::update_scene_uniform_buf(uint32_t currentImage)
 {
     /* Update variables inside uniform buffer */
     glm::mat4 modelMat  = glm::mat4(1.f);
@@ -1665,7 +1665,7 @@ void Simulation::updateUniformBuffer(uint32_t currentImage)
     vkUnmapMemory(device, _scene_uniform_buf_memory[currentImage]);
 }
 
-void Simulation::updateOffscreenBuffer()
+void Simulation::update_offscreen_uniform_buf()
 {
     // Matrix from light's point of view
     _uboOffscreenVS.proj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 20.f);
@@ -1686,7 +1686,7 @@ void Simulation::updateOffscreenBuffer()
     vkUnmapMemory(device, _offscreen_buffer.memory);
 }
 
-void Simulation::updateKeyboardInput()
+void Simulation::update_keyboard_input()
 {
     // Application
     if( glfwGetKey( _window, GLFW_KEY_ESCAPE ) == GLFW_PRESS )
@@ -1744,7 +1744,7 @@ void Simulation::updateKeyboardInput()
 
 }
 
-void Simulation::updateMouseInput()
+void Simulation::update_mouse_input()
 {
     glfwGetCursorPos(_window, &_mouse_input.mouseX, &_mouse_input.mouseY);
 
@@ -1764,15 +1764,15 @@ void Simulation::updateMouseInput()
     _mouse_input.lastMouseY    = _mouse_input.mouseY;
 }
 
-void Simulation::updateLight()
+void Simulation::update_light()
 {
     /* TODO: Update light position to make it circle run. */
 
 }
 
-void Simulation::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
+void Simulation::transition_image_layout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
 {
-    VkCommandBuffer commandBuffer = beganSingleTimeCommands();
+    VkCommandBuffer commandBuffer = began_single_time_commands();
 
     /* Use VkImageMemoryBarrier to ensure that write to the buffer completes before reading from it. 
     *  It is equivalent to VkBufferMemoryBarrier for buffers.
@@ -1836,10 +1836,10 @@ void Simulation::transitionImageLayout(VkImage image, VkFormat format, VkImageLa
         1, &barrier     /* Image Memory Barriers    */
         );
 
-    endSingleTimeCommands(commandBuffer);
+    end_single_time_commands(commandBuffer);
 }
 
-VkCommandBuffer Simulation::beganSingleTimeCommands()
+VkCommandBuffer Simulation::began_single_time_commands()
 {
     VkCommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -1861,7 +1861,7 @@ VkCommandBuffer Simulation::beganSingleTimeCommands()
     return commandBuffer;
 }
 
-void Simulation::endSingleTimeCommands(VkCommandBuffer commandBuffer)
+void Simulation::end_single_time_commands(VkCommandBuffer commandBuffer)
 {
     vkEndCommandBuffer(commandBuffer);
 
@@ -1876,7 +1876,7 @@ void Simulation::endSingleTimeCommands(VkCommandBuffer commandBuffer)
     vkFreeCommandBuffers(device, _command_pool, 1, &commandBuffer);
 }
 
-void Simulation::recreateSwapChain()
+void Simulation::recreate_swap_chain()
 {
     /* Handling Window minimization - size of framebuffer is 0 */
     int width;
@@ -1893,7 +1893,7 @@ void Simulation::recreateSwapChain()
 
     vkDeviceWaitIdle(device);
 
-    cleanupSwapChain();
+    cleanup_swap_chain();
 
     create_swap_chain();
     create_image_views();
@@ -1907,7 +1907,7 @@ void Simulation::recreateSwapChain()
     create_command_buffers();
 }
 
-void Simulation::cleanupSwapChain()
+void Simulation::cleanup_swap_chain()
 {
     /* Destroy depth resources */
     vkDestroyImageView(device, _scene_pass.depth.image_view, nullptr);
@@ -1973,7 +1973,7 @@ void Simulation::init_GLFW_window()
     glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
-bool Simulation::checkValidationLayerSupport()
+bool Simulation::check_validatio_layer_support()
 {
     uint32_t layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -2001,16 +2001,16 @@ bool Simulation::checkValidationLayerSupport()
     return true;
 }
 
-bool Simulation::isDeviceSuitable(VkPhysicalDevice device)
+bool Simulation::is_device_suitable(VkPhysicalDevice device)
 {
-    QueueFamilyIndices indices = findQueueFamilies(device);
+    QueueFamilyIndices indices = find_queue_families(device);
 
     bool extensionSupported = check_device_extension_support(device);
 
     bool swapChainAdequate = false;
     if( extensionSupported )
     {
-        SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
+        SwapChainSupportDetails swapChainSupport = query_swap_chain_support(device);
         swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
     }
 
@@ -2044,7 +2044,7 @@ void Simulation::draw_frame()
 
     if( result == VK_ERROR_OUT_OF_DATE_KHR )
     {
-        recreateSwapChain();
+        recreate_swap_chain();
         return;
     }
     else if ( result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR )
@@ -2060,7 +2060,7 @@ void Simulation::draw_frame()
     _sync_obj.imagesInFlight[imageIndex] = _sync_obj.inFlightFences[_currentFrame];
     
     /* Update Input and Variables */
-    updateVariables(imageIndex);
+    update_variables(imageIndex);
 
     /* Submit the command buffer */
     VkSubmitInfo submitInfo = {};
@@ -2107,7 +2107,7 @@ void Simulation::draw_frame()
     if( result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || _framebufferResized )
     {
         _framebufferResized = false;
-        recreateSwapChain();
+        recreate_swap_chain();
     }
     else if( result != VK_SUCCESS )
     {
@@ -2133,7 +2133,7 @@ void Simulation::main_loop()
 
 void Simulation::cleanup()
 {
-    cleanupSwapChain();
+    cleanup_swap_chain();
 
     vkDestroyPipeline(device, _pipelines.offscreen, nullptr);
     vkDestroyPipelineLayout(device, _pipeline_layouts.offscreen, nullptr);
