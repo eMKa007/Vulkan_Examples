@@ -1639,7 +1639,7 @@ void Simulation::update_scene_uniform_buf(uint32_t currentImage)
     /* Update variables inside uniform buffer */
     glm::mat4 modelMat  = glm::mat4(1.f);
     glm::mat4 viewMat   = cam01.getViewMatrix();
-    glm::mat4 projMat   = glm::perspective(glm::radians(lightFOV),
+    glm::mat4 projMat   = glm::perspective(glm::radians(_light.light_FOV),
                         _swap_chain.swap_chain_extent.width / static_cast<float>(_swap_chain.swap_chain_extent.height),
                         0.1f,
                         20.f);
@@ -1651,7 +1651,7 @@ void Simulation::update_scene_uniform_buf(uint32_t currentImage)
 
     uboBufferObj.cameraPos    = glm::vec4(cam01.getPosition(), 1.f);
     uboBufferObj.DepthMVP     = _uboOffscreenVS.proj * _uboOffscreenVS.view * _uboOffscreenVS.model;
-    uboBufferObj.lightPos     = glm::vec4(lightPos, 1.f);
+    uboBufferObj.lightPos     = glm::vec4(_light.light_pos, 1.f);
 
     /* With providing this information, we can now map memory of the uniform buffer. */
     void* data;
@@ -1672,7 +1672,7 @@ void Simulation::update_offscreen_uniform_buf()
 
     /* GLM was originally designed for OpenGL, it is important to revert scaling factor of Y axis. */
     _uboOffscreenVS.proj[1][1] *= -1;
-    _uboOffscreenVS.view = glm::lookAt(lightPos, glm::vec3(0.0f, 0.f, 0.f), glm::vec3(0, 1, 0));
+    _uboOffscreenVS.view = glm::lookAt(_light.light_pos, glm::vec3(0.0f, 0.f, 0.f), glm::vec3(0, 1, 0));
     _uboOffscreenVS.model = glm::mat4(1.0f);
 
     void* data;
@@ -1729,17 +1729,17 @@ void Simulation::update_keyboard_input()
 
     if( glfwGetKey( _window, GLFW_KEY_UP ) == GLFW_PRESS )
     {
-        lightPos.x += 0.1f;
+        _light.light_pos.x += 0.1f;
     }
 
     if( glfwGetKey( _window, GLFW_KEY_DOWN ) == GLFW_PRESS )
     {
-        lightPos.y -= 0.1f;
+        _light.light_pos.y -= 0.1f;
     }
 
     if( glfwGetKey( _window, GLFW_KEY_LEFT ) == GLFW_PRESS )
     {
-        lightPos.z += 0.1f;
+        _light.light_pos.z += 0.1f;
     }
 
 }
@@ -1767,7 +1767,19 @@ void Simulation::update_mouse_input()
 void Simulation::update_light()
 {
     /* TODO: Update light position to make it circle run. */
+    if( _light.move_light )
+    {
+        _light.angle += _time.dt * 0.7f;
 
+        if (_light.angle > glm::two_pi<float>()) 
+            _light.angle -= glm::two_pi<float>();
+
+        float new_x = std::cosf(_light.angle) * 7.f;
+        float new_z = std::sinf(_light.angle) * 7.f;
+
+        _light.light_pos.x = new_x;
+        _light.light_pos.z = new_z;
+    }
 }
 
 void Simulation::transition_image_layout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)

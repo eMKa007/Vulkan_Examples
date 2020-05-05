@@ -145,6 +145,16 @@ private:
         double mouseOffsetX;
         double mouseOffsetY;
     } _mouse_input;
+
+    struct Light {
+        bool move_light     = true;
+        glm::vec3 light_pos = glm::vec3(5.f, 5.f, 5.f);
+        float light_FOV     = 45.0f;
+
+        /* Angle variable to move light */
+        float angle         = 0.f;
+    } _light;
+
     
     /* Available and enable API extensions */
     std::vector<const char*> validationLayers;
@@ -288,10 +298,6 @@ private:
 
         glm::vec4 lightPos;
     } uboBufferObj;
-
-    /* Light position and field of view. */
-    glm::vec3 lightPos = glm::vec3(5.f, 5.f, 5.f);
-    float lightFOV = 45.0f;
 
 #ifdef NDEBUG
     const bool enableValidationLayers = true;
