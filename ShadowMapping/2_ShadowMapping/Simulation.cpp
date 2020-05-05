@@ -273,8 +273,8 @@ void Simulation::createSwapChain()
     }
 
     vkGetSwapchainImagesKHR(device, _swap_chain.swap_chain, &imageCount, nullptr);
-    swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(device, _swap_chain.swap_chain, &imageCount, swapChainImages.data());
+    _swap_chain.swapChainImages.resize(imageCount);
+    vkGetSwapchainImagesKHR(device, _swap_chain.swap_chain, &imageCount, _swap_chain.swapChainImages.data());
 
     _swap_chain.swap_chain_image_format = surfaceFormat.format;
     _swap_chain.swap_chain_extent = extent;
@@ -282,15 +282,13 @@ void Simulation::createSwapChain()
 
 void Simulation::createImageViews()
 {
-    swapChainImageViews.resize(swapChainImages.size());
+    _swap_chain.swapChainImageViews.resize(_swap_chain.swapChainImages.size());
 
     /*
      * Loop through all images to create image view for every of them.
      */
-    for ( unsigned int i = 0; i < swapChainImages.size(); i++)
-    {
-        swapChainImageViews[i] = createImageView(swapChainImages[i], _swap_chain.swap_chain_image_format, VK_IMAGE_ASPECT_COLOR_BIT);
-    }
+    for ( unsigned int i = 0; i < _swap_chain.swapChainImages.size(); i++)
+        _swap_chain.swapChainImageViews[i] = createImageView(_swap_chain.swapChainImages[i], _swap_chain.swap_chain_image_format, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 void Simulation::createRenderPass()
@@ -543,7 +541,7 @@ void Simulation::createGraphicsPipeline()
     pipelineLayoutInfo.pushConstantRangeCount = 0;        // Optional
     pipelineLayoutInfo.pPushConstantRanges    = nullptr;  // Optional
    
-    if( vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &_pipeline_layout) != VK_SUCCESS)
+    if( vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &_pipeline_layouts.scene) != VK_SUCCESS)
         throw std::runtime_error("Failed to create pipeline layout! :(\n");
 
     /* Create pipeline layout for offscreen render pass. */
@@ -564,7 +562,7 @@ void Simulation::createGraphicsPipeline()
     pipelineInfo.pColorBlendState       = &colorBlending;
     pipelineInfo.pDynamicState          = nullptr;
     
-    pipelineInfo.layout                 = _pipeline_layout;
+    pipelineInfo.layout                 = _pipeline_layouts.scene;
     pipelineInfo.renderPass             = _scene_pass.render_pass;
     
     pipelineInfo.subpass                = 0;    // Index of the subpass where this pipeline will be used.
@@ -572,7 +570,7 @@ void Simulation::createGraphicsPipeline()
     pipelineInfo.basePipelineHandle     = VK_NULL_HANDLE;   // Optional
     pipelineInfo.basePipelineIndex      = -1;               // Optional
 
-    if( vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_graphics_pipeline) != VK_SUCCESS)
+    if( vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_pipelines.scene) != VK_SUCCESS)
         throw std::runtime_error("Failed to create Graphics Pipeline! :( \n");
 
     /* Offscreen Pipeline - vertex shader only */
@@ -605,11 +603,11 @@ void Simulation::createGraphicsPipeline()
 
 void Simulation::createFramebuffers()
 {
-    _swapchain_framebuffers.resize(swapChainImages.size());
+    _scene_pass.framebuffers.resize(_swap_chain.swapChainImages.size());
 
-    for(size_t i=0; i< swapChainImageViews.size(); i++)
+    for(size_t i=0; i< _swap_chain.swapChainImageViews.size(); i++)
     {
-        std::array<VkImageView, 2> attachments = { swapChainImageViews[i], _scene_pass.depth.image_view };
+        std::array<VkImageView, 2> attachments = { _swap_chain.swapChainImageViews[i], _scene_pass.depth.image_view };
 
         VkFramebufferCreateInfo framebufferInfo = {};
         framebufferInfo.sType   = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -620,7 +618,7 @@ void Simulation::createFramebuffers()
         framebufferInfo.height          = _swap_chain.swap_chain_extent.height;
         framebufferInfo.layers          = 1;
  
-        if(vkCreateFramebuffer(device, &framebufferInfo, nullptr, &_swapchain_framebuffers[i]) != VK_SUCCESS)
+        if(vkCreateFramebuffer(device, &framebufferInfo, nullptr, &_scene_pass.framebuffers[i]) != VK_SUCCESS)
             throw std::runtime_error("Failed to create framebuffer :( \n");
     }
 
@@ -983,58 +981,37 @@ void Simulation::createUniformBuffers()
     VkDeviceSize bufferSize = sizeof(uboBufferObj);
 
     /* Resize array of buffers to hold buffer for every image in _swap_chain.swap_chain */
-    uniformBuffers.resize(swapChainImages.size());
-    uniformBuffersMemory.resize(swapChainImages.size());
+    _scene_uniform_buffers.resize(_swap_chain.swapChainImages.size());
+    _scene_uniform_buf_memory.resize(_swap_chain.swapChainImages.size());
 
     /* Create Buffer for every of uniformBuffer array member */
-    for( size_t i = 0; i<swapChainImages.size(); i++)
+    for( size_t i = 0; i<_swap_chain.swapChainImages.size(); i++)
     {
         createBuffer(bufferSize,
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            uniformBuffers[i],
-            uniformBuffersMemory[i]
+            _scene_uniform_buffers[i],
+            _scene_uniform_buf_memory[i]
         );
     }
-
-    
-
-
 
     /* Initialize uniform buffer object for offscreen render pass */
     _offscreen_buffer.size          = sizeof(UBOOffscreenVS);
     _offscreen_buffer.usageFlags    = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     _offscreen_buffer.memoryPropertyFlags   = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     
-    /* Specify memory desired type and size */
-    VkBufferCreateInfo bufferInfo = {};
-    bufferInfo.sType    = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size     = _offscreen_buffer.size;           /* Size of buffer in bytes */
-    bufferInfo.usage    = _offscreen_buffer.usageFlags;
-    bufferInfo.flags    = 0;                                    /* No additional parameters */
-    bufferInfo.sharingMode  = VK_SHARING_MODE_EXCLUSIVE;
-
-    if(vkCreateBuffer(device, &bufferInfo, nullptr, &_offscreen_buffer.buffer) != VK_SUCCESS )
-        throw std::runtime_error("Failed to create vertex buffer. :( \n");
-
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(device, _offscreen_buffer.buffer, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize    = memRequirements.size;
-    allocInfo.memoryTypeIndex   = findMemoryType(memRequirements.memoryTypeBits, _offscreen_buffer.memoryPropertyFlags); // Mapped memory always matches the contents of the allocated memory.
- 
-    if(vkAllocateMemory(device, &allocInfo, nullptr, &_offscreen_buffer.memory))
-        throw std::runtime_error("Failed to allocate vertex buffer memory! :( \n");
+    /* Create Buffer for offscreen rendering */
+    createBuffer(_offscreen_buffer.size,
+        _offscreen_buffer.usageFlags,
+        _offscreen_buffer.memoryPropertyFlags,
+        _offscreen_buffer.buffer,
+        _offscreen_buffer.memory
+    );
 
     // Initialize a default descriptor that covers the whole buffer size
     _offscreen_buffer.descriptor.offset     = 0;
     _offscreen_buffer.descriptor.buffer     = _offscreen_buffer.buffer;
     _offscreen_buffer.descriptor.range      = VK_WHOLE_SIZE; 
-
-    /* Bind created memory to vertex buffer object */
-    vkBindBufferMemory(device, _offscreen_buffer.buffer, _offscreen_buffer.memory, 0);
 }
 
 void Simulation::createDescriptorPool()
@@ -1044,9 +1021,9 @@ void Simulation::createDescriptorPool()
     */
     std::array<VkDescriptorPoolSize, 2> poolSize = {};
     poolSize[0].type    = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;    /* Which descriptors types this pool is going to contain. */
-    poolSize[0].descriptorCount     = static_cast<uint32_t>(swapChainImages.size() + 1);  
+    poolSize[0].descriptorCount     = static_cast<uint32_t>(_swap_chain.swapChainImages.size() + 1);  
     poolSize[1].type    = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSize[1].descriptorCount     = static_cast<uint32_t>(swapChainImages.size() + 1);
+    poolSize[1].descriptorCount     = static_cast<uint32_t>(_swap_chain.swapChainImages.size() + 1);
 
 
     /* Allocate one pool which can contain up to swap images count descriptors sets. */
@@ -1054,7 +1031,7 @@ void Simulation::createDescriptorPool()
     poolInfo.sType  = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount  = static_cast<uint32_t>(poolSize.size());
     poolInfo.pPoolSizes     = poolSize.data();
-    poolInfo.maxSets        = static_cast<uint32_t>(swapChainImages.size() + 1);
+    poolInfo.maxSets        = static_cast<uint32_t>(_swap_chain.swapChainImages.size() + 1);
     poolInfo.flags          = 0; /* Default Value */
 
     if(vkCreateDescriptorPool(device, &poolInfo, nullptr, &_descriptor_pool) != VK_SUCCESS )
@@ -1064,25 +1041,25 @@ void Simulation::createDescriptorPool()
 void Simulation::createDescriptorSets()
 {
     /* We will create one descriptor set for each swap chain image- all with the same layout. */
-    std::vector<VkDescriptorSetLayout> layouts(swapChainImages.size(), descriptorSetLayout);
+    std::vector<VkDescriptorSetLayout> layouts(_swap_chain.swapChainImages.size(), descriptorSetLayout);
 
     VkDescriptorSetAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool        = _descriptor_pool;
-    allocInfo.descriptorSetCount    = static_cast<uint32_t>(swapChainImages.size());
+    allocInfo.descriptorSetCount    = static_cast<uint32_t>(_swap_chain.swapChainImages.size());
     allocInfo.pSetLayouts           = layouts.data();
 
     /* Allocate every descriptor set */
-    _descriptor_sets.scene.resize(swapChainImages.size());
+    _descriptor_sets.scene.resize(_swap_chain.swapChainImages.size());
     if(vkAllocateDescriptorSets(device, &allocInfo, _descriptor_sets.scene.data()) != VK_SUCCESS )
         throw std::runtime_error("Failed to allocate descriptor sets. :( \n");
 
     /* Configure each descriptor. */
-    for( size_t i = 0; i<swapChainImages.size(); i++)
+    for( size_t i = 0; i<_swap_chain.swapChainImages.size(); i++)
     {
         /* Specify UBO information */
         VkDescriptorBufferInfo bufferInfo = {};
-        bufferInfo.buffer   = uniformBuffers[i];
+        bufferInfo.buffer   = _scene_uniform_buffers[i];
         bufferInfo.offset   = 0;
         bufferInfo.range    = VK_WHOLE_SIZE;  /* If Updating whole buffer - we can use VK_WHOLE_SIZE */
     
@@ -1168,7 +1145,7 @@ void Simulation::createDescriptorSets()
 void Simulation::createCommandBuffers()
 {
     // Allocate and record commands for each swap chain image.
-    _command_buffers.resize(_swapchain_framebuffers.size());
+    _command_buffers.resize(_scene_pass.framebuffers.size());
 
     VkCommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -1261,7 +1238,7 @@ void Simulation::createCommandBuffers()
             VkRenderPassBeginInfo renderPassInfo = {};
             renderPassInfo.sType    = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
             renderPassInfo.renderPass   = _scene_pass.render_pass;
-            renderPassInfo.framebuffer  = _swapchain_framebuffers[i];
+            renderPassInfo.framebuffer  = _scene_pass.framebuffers[i];
             
             /* Define size of render area */
             renderPassInfo.renderArea.offset    = {0,0};
@@ -1276,7 +1253,7 @@ void Simulation::createCommandBuffers()
             /* RECORDING */
             vkCmdBeginRenderPass(_command_buffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
             
-            vkCmdBindPipeline(_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, _graphics_pipeline);
+            vkCmdBindPipeline(_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelines.scene);
 
             /* Binding vertex buffer */
             VkBuffer vertexBuffers[] = {_vertex_buffer};
@@ -1289,7 +1266,7 @@ void Simulation::createCommandBuffers()
             /* Bind descriptor sets- to update uniform data. */
             vkCmdBindDescriptorSets(_command_buffers[i], 
                 VK_PIPELINE_BIND_POINT_GRAPHICS, 
-                _pipeline_layout, 
+                _pipeline_layouts.scene, 
                 0, 
                 1, 
                 &_descriptor_sets.scene[i], 
@@ -1313,7 +1290,7 @@ void Simulation::createSyncObjects()
     _sync_obj._image_available_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
     _sync_obj._render_finished_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
     _sync_obj.inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
-    _sync_obj.imagesInFlight.resize(swapChainImages.size(), VK_NULL_HANDLE);
+    _sync_obj.imagesInFlight.resize(_swap_chain.swapChainImages.size(), VK_NULL_HANDLE);
 
     VkSemaphoreCreateInfo semaphoreInfo = {};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -1706,13 +1683,13 @@ void Simulation::updateUniformBuffer(uint32_t currentImage)
     /* With providing this information, we can now map memory of the uniform buffer. */
     void* data;
     vkMapMemory(device, 
-        uniformBuffersMemory[currentImage], 
+        _scene_uniform_buf_memory[currentImage], 
         0,
         VK_WHOLE_SIZE,
         0,
         &data );
     memcpy(data, &uboBufferObj, sizeof(uboBufferObj));
-    vkUnmapMemory(device, uniformBuffersMemory[currentImage]);
+    vkUnmapMemory(device, _scene_uniform_buf_memory[currentImage]);
 }
 
 void Simulation::updateOffscreenBuffer()
@@ -1963,24 +1940,24 @@ void Simulation::cleanupSwapChain()
     vkDestroyImage(device, _scene_pass.depth.image, nullptr);
     vkFreeMemory(device, _scene_pass.depth.memory, nullptr);
 
-    for( size_t i = 0; i < _swapchain_framebuffers.size(); i++ )
-        vkDestroyFramebuffer(device, _swapchain_framebuffers[i], nullptr);
+    for( size_t i = 0; i < _scene_pass.framebuffers.size(); i++ )
+        vkDestroyFramebuffer(device, _scene_pass.framebuffers[i], nullptr);
 
     vkFreeCommandBuffers(device, _command_pool, static_cast<uint32_t>(_command_buffers.size()), _command_buffers.data());
 
-    vkDestroyPipeline(device, _graphics_pipeline, nullptr);
-    vkDestroyPipelineLayout(device, _pipeline_layout, nullptr);
+    vkDestroyPipeline(device, _pipelines.scene, nullptr);
+    vkDestroyPipelineLayout(device, _pipeline_layouts.scene, nullptr);
     vkDestroyRenderPass(device, _scene_pass.render_pass, nullptr);
 
-    for( size_t i = 0; i < swapChainImageViews.size(); i++ )
-        vkDestroyImageView(device, swapChainImageViews[i], nullptr);
+    for( size_t i = 0; i < _swap_chain.swapChainImageViews.size(); i++ )
+        vkDestroyImageView(device, _swap_chain.swapChainImageViews[i], nullptr);
 
     vkDestroySwapchainKHR(device, _swap_chain.swap_chain, nullptr);
     
-    for (size_t i = 0; i < swapChainImages.size(); i++) 
+    for (size_t i = 0; i < _swap_chain.swapChainImages.size(); i++) 
     {
-        vkDestroyBuffer(device, uniformBuffers[i], nullptr);
-        vkFreeMemory(device, uniformBuffersMemory[i], nullptr);
+        vkDestroyBuffer(device, _scene_uniform_buffers[i], nullptr);
+        vkFreeMemory(device, _scene_uniform_buf_memory[i], nullptr);
     }
 
     vkDestroyDescriptorPool(device, _descriptor_pool, nullptr);

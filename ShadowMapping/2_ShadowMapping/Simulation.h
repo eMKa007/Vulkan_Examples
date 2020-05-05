@@ -160,6 +160,9 @@ private:
     VkPhysicalDevice    physicalDevice = VK_NULL_HANDLE;
     VkDevice            device;
 
+    /* Current used frame */
+    size_t _currentFrame = 0;
+
     /* Queues */
     struct Queues {
         VkQueue graphics_queue;
@@ -171,13 +174,16 @@ private:
         VkSwapchainKHR  swap_chain;
         VkFormat        swap_chain_image_format;
         VkExtent2D      swap_chain_extent;
+
+        /* Swap chain image handles */
+        std::vector<VkImage> swapChainImages;
+
+        /* Image Views */
+        std::vector<VkImageView> swapChainImageViews;
     } _swap_chain;
 
-    /* Swap chain image handles */
-    std::vector<VkImage> swapChainImages;
-
-    /* Image Views */
-    std::vector<VkImageView> swapChainImageViews;
+    /* Descriptor pool to hold descriptors set. */
+    VkDescriptorPool _descriptor_pool;
 
     /* Descriptors Layout - all of the descriptors are combined into single descriptor set layout. */
     VkDescriptorSetLayout           descriptorSetLayout;
@@ -197,32 +203,38 @@ private:
     } _offscreen_pass;
 
     struct ScenePass {
-        VkFramebuffer           frameBuffer;
+        /* Separate framebuffer for each swapchain image. */
+        std::vector<VkFramebuffer>  framebuffers;
 
         /* Depth testing requires three resources- image, memory and image view. */
-        FrameBufferAttachment   depth;
-        VkRenderPass            render_pass;
-        VkSampler               depthSampler;
-        VkDescriptorImageInfo   descriptor;
+        FrameBufferAttachment       depth;
+        VkRenderPass                render_pass;
+        VkSampler                   depthSampler;
+        VkDescriptorImageInfo       descriptor;
     } _scene_pass;
 
-    /* Pipeline Layouts */
-    VkPipelineLayout    _pipeline_layout;
+    struct {
+        VkPipelineLayout offscreen;
+        VkPipelineLayout scene;
+    } _pipeline_layouts;
 
-    /* Main Graphics Pipeline */
-    VkPipeline _graphics_pipeline;
+    struct {
+        /* Offscreen rendering pipeline */
+        VkPipeline offscreen;
+        /* Main graphics pipeline */
+        VkPipeline scene;
+    } _pipelines;
 
-    /* Framebuffers */
-    std::vector<VkFramebuffer> _swapchain_framebuffers;
+    struct {
+        VkDescriptorSet offscreen;
+        std::vector<VkDescriptorSet>    scene;
+    } _descriptor_sets;
 
     /* Command Pool- to store commands */
     VkCommandPool _command_pool;
 
     /* Command Buffers- to record commands */
     std::vector<VkCommandBuffer> _command_buffers;
-
-    /* Current used frame */
-    size_t _currentFrame = 0;
 
     struct Sync_Objects {
         /* Semaphore- signals that an image has been acquired and is ready for rendering. */
@@ -246,11 +258,8 @@ private:
     VkDeviceMemory  _index_buffer_memory;
 
     /* Uniform Buffers - they'll be update after every frame so every image in swapchain will have own uniform buffer. */
-    std::vector<VkBuffer>       uniformBuffers;
-    std::vector<VkDeviceMemory> uniformBuffersMemory;
-
-    /* Descriptor pool to hold descriptors set. */
-    VkDescriptorPool _descriptor_pool;
+    std::vector<VkBuffer>       _scene_uniform_buffers;
+    std::vector<VkDeviceMemory> _scene_uniform_buf_memory;
 
     struct {
         VkBuffer                buffer = VK_NULL_HANDLE;
@@ -259,9 +268,7 @@ private:
         VkDeviceSize            size = 0;
         VkDeviceSize            alignment = 0;
         void*                   mapped = nullptr;
-
         VkBufferUsageFlags      usageFlags;
-
         VkMemoryPropertyFlags   memoryPropertyFlags;
     } _offscreen_buffer;
 
@@ -270,20 +277,6 @@ private:
         glm::mat4 view;
         glm::mat4 proj;
     } _uboOffscreenVS;
-
-    struct {
-        VkPipelineLayout offscreen;
-    } _pipeline_layouts;
-
-    struct {
-        VkPipeline offscreen;
-    } _pipelines;
-
-    struct {
-        VkDescriptorSet offscreen;
-        std::vector<VkDescriptorSet>    scene;
-    } _descriptor_sets;
-
 
     /* Light position and field of view. */
     glm::vec3 lightPos = glm::vec3(5.f, 5.f, 5.f);
