@@ -17,7 +17,7 @@ struct QueueFamilyIndices
 
 struct SwapChainSupportDetails 
 {
-    VkSurfaceCapabilitiesKHR capabilities;
+    VkSurfaceCapabilitiesKHR capabilities {};
     std::vector<VkSurfaceFormatKHR> formats;
     std::vector<VkPresentModeKHR> presentModes;
 };
@@ -115,7 +115,7 @@ public:
     unsigned int _windowWidth;
     unsigned int _windowHeight;
     std::string _windowName;
-    GLFWwindow* _window;
+    GLFWwindow* _window = nullptr;
 
     /* Handling Window Resize Explicity */
     bool _framebufferResized = false;
@@ -125,25 +125,25 @@ public:
 private:
     /* Delta Time variables */
     struct Time_Count {
-        float currTime;
-        float dt;
-        float lastTime;
+        float currTime  = 0.f;
+        float dt        = 0.f;
+        float lastTime  = 0.f;
     } _time;
     
     /* Camera Object */
-    Camera cam01;
+    Camera _camera;
 
     /* Mouse Input Variables */
     struct Mouse_Input {
-        bool firstMouse = true;
-        double lastMouseX;
-        double lastMouseY;
+        bool firstMouse     = true;
+        double last_mouse_X = 0.f;
+        double last_mouse_Y = 0.f;
 
-        double mouseX;
-        double mouseY;
+        double mouse_X      = 0.f;
+        double mouse_Y      = 0.f;
 
-        double mouseOffsetX;
-        double mouseOffsetY;
+        double mouse_offset_X   = 0.f;
+        double mouse_offset_Y   = 0.f;
     } _mouse_input;
 
     struct Light {
@@ -154,21 +154,20 @@ private:
         /* Angle variable to move light */
         float angle         = 0.f;
     } _light;
-
     
     /* Available and enable API extensions */
-    std::vector<const char*> validationLayers;
-    std::vector<const char*> deviceExtensions;
+    std::vector<const char*> validation_layers;
+    std::vector<const char*> device_extensions;
 
     /* Instance */
-    VkInstance instance;
+    VkInstance instance = nullptr;
 
     /* Surface */
-    VkSurfaceKHR surface;
+    VkSurfaceKHR surface = 0;
 
     /* Device */
-    VkPhysicalDevice    physicalDevice = VK_NULL_HANDLE;
-    VkDevice            device;
+    VkPhysicalDevice    physical_device = VK_NULL_HANDLE;
+    VkDevice            device          = nullptr;
 
     /* Current used frame */
     size_t _currentFrame = 0;
@@ -181,21 +180,21 @@ private:
     
     /* Swap chain */
     struct Swapchain {
-        VkSwapchainKHR  swap_chain;
-        VkFormat        swap_chain_image_format;
-        VkExtent2D      swap_chain_extent;
+        VkSwapchainKHR  swap_chain {};
+        VkFormat        swap_chain_image_format {};
+        VkExtent2D      swap_chain_extent {};
 
         /* Swap chain image handles */
-        std::vector<VkImage> swapChainImages;
+        std::vector<VkImage> swap_chain_images {};
 
         /* Image Views */
-        std::vector<VkImageView> swapChainImageViews;
+        std::vector<VkImageView> swap_chain_image_views {};
     } _swap_chain;
 
     /* Descriptor pool to hold descriptors set. */
     VkDescriptorPool        _descriptor_pool;
     /* Descriptors Layout - all of the descriptors are combined into single descriptor set layout. */
-    VkDescriptorSetLayout   descriptorSetLayout;
+    VkDescriptorSetLayout   _descriptor_set_layout;
 
     struct FrameBufferAttachment {
         VkImage         image;
@@ -206,20 +205,20 @@ private:
     struct OffscreenPass {
         VkFramebuffer           frameBuffer;
         FrameBufferAttachment   depth;
-        VkRenderPass            renderPass;
-        VkSampler               depthSampler;
+        VkRenderPass            render_pass;
+        VkSampler               depth_sampler;
         VkDescriptorImageInfo   descriptor;
     } _offscreen_pass;
 
     struct ScenePass {
         /* Separate framebuffer for each swapchain image. */
-        std::vector<VkFramebuffer>  framebuffers;
+        std::vector<VkFramebuffer>  framebuffers {};
 
         /* Depth testing requires three resources- image, memory and image view. */
-        FrameBufferAttachment       depth;
-        VkRenderPass                render_pass;
-        VkSampler                   depthSampler;
-        VkDescriptorImageInfo       descriptor;
+        FrameBufferAttachment       depth {};
+        VkRenderPass                render_pass {};
+        VkSampler                   depth_sampler {};
+        VkDescriptorImageInfo       descriptor {};
     } _scene_pass;
 
     struct {
@@ -235,8 +234,8 @@ private:
     } _pipelines;
 
     struct {
-        VkDescriptorSet offscreen;
-        std::vector<VkDescriptorSet>    scene;
+        VkDescriptorSet                 offscreen {};
+        std::vector<VkDescriptorSet>    scene {};
     } _descriptor_sets;
 
     /* Command Pool- to store commands */
@@ -253,8 +252,8 @@ private:
         std::vector<VkSemaphore> _render_finished_semaphores;
 
         /* CPU-GPU synchronization fences */
-        std::vector<VkFence> inFlightFences;
-        std::vector<VkFence> imagesInFlight;
+        std::vector<VkFence> in_flight_fences;
+        std::vector<VkFence> images_in_flight;
     } _sync_obj;
 
     /* Vertex and Indices Variables */
@@ -276,15 +275,15 @@ private:
         VkDescriptorBufferInfo  descriptor;
         VkDeviceSize            size = 0;
         VkDeviceSize            alignment = 0;
-        VkBufferUsageFlags      usageFlags;
-        VkMemoryPropertyFlags   memoryPropertyFlags;
+        VkBufferUsageFlags      usageFlags {};
+        VkMemoryPropertyFlags   memory_property_flags {};
     } _offscreen_buffer;
 
     struct UBOOffscreenVS {
         glm::mat4 model;
         glm::mat4 view;
         glm::mat4 proj;
-    } _uboOffscreenVS;
+    } _offscreen_uniform_buf_obj;
 
     struct {
         glm::mat4 modelMat;
@@ -297,7 +296,7 @@ private:
         glm::mat4 DepthMVP;
 
         glm::vec4 lightPos;
-    } uboBufferObj;
+    } _scene_uniform_buf_obj;
 
 #ifdef NDEBUG
     const bool enableValidationLayers = true;
