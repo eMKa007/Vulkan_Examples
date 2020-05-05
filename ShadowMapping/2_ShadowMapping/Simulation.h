@@ -183,10 +183,9 @@ private:
     } _swap_chain;
 
     /* Descriptor pool to hold descriptors set. */
-    VkDescriptorPool _descriptor_pool;
-
+    VkDescriptorPool        _descriptor_pool;
     /* Descriptors Layout - all of the descriptors are combined into single descriptor set layout. */
-    VkDescriptorSetLayout           descriptorSetLayout;
+    VkDescriptorSetLayout   descriptorSetLayout;
 
     struct FrameBufferAttachment {
         VkImage         image;
@@ -267,7 +266,6 @@ private:
         VkDescriptorBufferInfo  descriptor;
         VkDeviceSize            size = 0;
         VkDeviceSize            alignment = 0;
-        void*                   mapped = nullptr;
         VkBufferUsageFlags      usageFlags;
         VkMemoryPropertyFlags   memoryPropertyFlags;
     } _offscreen_buffer;
@@ -277,6 +275,19 @@ private:
         glm::mat4 view;
         glm::mat4 proj;
     } _uboOffscreenVS;
+
+    struct {
+        glm::mat4 modelMat;
+        glm::mat4 viewProjMat;
+
+        /* Camera position */
+        glm::vec4 cameraPos;
+        
+        /* Model-View-Projection matrix from lights POV */
+        glm::mat4 DepthMVP;
+
+        glm::vec4 lightPos;
+    } uboBufferObj;
 
     /* Light position and field of view. */
     glm::vec3 lightPos = glm::vec3(5.f, 5.f, 5.f);
@@ -289,33 +300,37 @@ private:
 #endif
 
     /* Initialize Vulkan API */
-    void initVulkan();
-    void createInstance();
-    void createSurface();
-    void pickPhysicalDevice();
-    void createLogicalDevice();
-    bool checkDeviceExtensionSupport(VkPhysicalDevice device);
-    void createSwapChain();
-    void createImageViews();
-    void createRenderPass();
-    void createDescriptorSetLayout();
-    void createGraphicsPipeline();
-    void createDepthResources();
-    void createFramebuffers();
-    void createCommandPool();
-    void createTextureSamper();
-    void loadModel();
-    void createVertexBuffer();
-    void createIndexBuffer();
-    void createUniformBuffers();
-    void createDescriptorPool();
-    void createDescriptorSets();
-    void createCommandBuffers();
-    void createSyncObjects();
+    void init_vulkan();
+    void create_instance();
+    void create_surface();
+    void pick_physical_device();
+    void create_logical_device();
+    bool check_device_extension_support(VkPhysicalDevice device);
+    void create_swap_chain();
+    void create_image_views();
+    void create_scene_render_pass();
+    void create_offscreen_render_pass();
+    void create_descriptor_set_layout();
+    void create_graphics_pipeline();
+    void create_depth_resources();
+    void create_depth_texture_sampler();
+    void create_scene_framebuffer();
+    void create_offscreen_framebuffer();
+    void create_command_pool();
+    void create_vertex_buffer();
+    void create_index_buffer();
+    void create_uniform_buffers();
+    void create_descriptor_pool();
+    void create_descriptor_sets();
+    void create_command_buffers();
+    void create_sync_objects();
 
     /* Initialize GLFW */
-    void initGLFW();
-    void initWindow();
+    void init_GLFW();
+    void init_GLFW_window();
+
+    /* Load model using tiny_obj_loader library */
+    void load_model();
 
     /* Auxiliary Functions */
     bool                    checkValidationLayerSupport();
@@ -339,6 +354,8 @@ private:
     void                    copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
     void                    copyBufferToImage( VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
+    void                    add_quad_under_model(float minY, int count, float quad_coord);
+
     void                    updateVariables(uint32_t imageIndex);
     void                    updateDT();
     void                    updateUniformBuffer(uint32_t currentImage);
@@ -356,27 +373,10 @@ private:
     void cleanupSwapChain();
 
     /* Drawing */
-    void drawFrame();
+    void draw_frame();
 
-    void mainLoop();
+    void main_loop();
     void cleanup();
-
-   
-    void createOffscreenFramebuffer();
-    void prepareOffscreenRenderPass();
-
-    struct {
-        glm::mat4 modelMat;
-        glm::mat4 viewProjMat;
-
-        /* Camera position */
-        glm::vec4 cameraPos;
-        
-        /* Model-View-Projection matrix from lights POV */
-        glm::mat4 DepthMVP;
-
-        glm::vec4 lightPos;
-    } uboBufferObj;
 };
 
 static std::vector<char> readFile( const std::string& filename )

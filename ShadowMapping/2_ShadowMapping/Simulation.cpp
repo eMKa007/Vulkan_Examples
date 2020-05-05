@@ -1,10 +1,6 @@
 
 #include "Simulation.h"
 
-/* Image Loader */
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
 /* Model Loader */
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
@@ -27,10 +23,10 @@ Simulation::Simulation( unsigned int windowWidth, unsigned int windowHeight, std
     validationLayers.push_back("VK_LAYER_KHRONOS_validation");
     deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
-    initGLFW();
-    initWindow();
+    init_GLFW();
+    init_GLFW_window();
 
-    initVulkan();
+    init_vulkan();
 }
 
 
@@ -38,36 +34,38 @@ Simulation::~Simulation() { }
 
 void Simulation::run()
 {
-    mainLoop();
+    main_loop();
     cleanup();
 }
 
-void Simulation::initVulkan()
+void Simulation::init_vulkan()
 {
-    createInstance();
-    createSurface();
-    pickPhysicalDevice();
-    createLogicalDevice();
-    createSwapChain();
-    createImageViews();
-    createRenderPass();
-    createDescriptorSetLayout();
-    createGraphicsPipeline();
-    createDepthResources();
-    createFramebuffers();
-    createCommandPool();
-    createTextureSamper();
-    loadModel();
-    createVertexBuffer();
-    createIndexBuffer();
-    createUniformBuffers();
-    createDescriptorPool();
-    createDescriptorSets();
-    createCommandBuffers();
-    createSyncObjects();
+    create_instance();
+    create_surface();
+    pick_physical_device();
+    create_logical_device();
+    create_swap_chain();
+    create_image_views();
+    create_scene_render_pass();
+    create_offscreen_render_pass();
+    create_descriptor_set_layout();
+    create_graphics_pipeline();
+    create_depth_resources();
+    create_scene_framebuffer();
+    create_offscreen_framebuffer();
+    create_command_pool();
+    create_depth_texture_sampler();
+    load_model();
+    create_vertex_buffer();
+    create_index_buffer();
+    create_uniform_buffers();
+    create_descriptor_pool();
+    create_descriptor_sets();
+    create_command_buffers();
+    create_sync_objects();
 }
 
-void Simulation::createInstance()
+void Simulation::create_instance()
 {
     if (enableValidationLayers && !checkValidationLayerSupport())
             throw std::runtime_error("validation layers requested, but not available!");
@@ -108,7 +106,7 @@ void Simulation::createInstance()
         throw std::runtime_error("failed to create instance!");
 }
 
-void Simulation::pickPhysicalDevice()
+void Simulation::pick_physical_device()
 {
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -131,7 +129,7 @@ void Simulation::pickPhysicalDevice()
         throw std::runtime_error("Failed to find a suitable GPU!");
 }
 
-void Simulation::createLogicalDevice()
+void Simulation::create_logical_device()
 {
     QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
@@ -149,7 +147,6 @@ void Simulation::createLogicalDevice()
         queueCreateInfo.pQueuePriorities = &queuePriority;
         queueCreateInfos.push_back(queueCreateInfo);
     }
-
 
     VkPhysicalDeviceFeatures deviceFeatures = {};
     deviceFeatures.samplerAnisotropy    = VK_TRUE;
@@ -182,7 +179,7 @@ void Simulation::createLogicalDevice()
     vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &_queues.present_queue);
 }
 
-bool Simulation::checkDeviceExtensionSupport(VkPhysicalDevice device)
+bool Simulation::check_device_extension_support(VkPhysicalDevice device)
 {
     uint32_t extensionCount;
     vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
@@ -201,7 +198,7 @@ bool Simulation::checkDeviceExtensionSupport(VkPhysicalDevice device)
     return requiredExtension.empty();
 }
 
-void Simulation::createSwapChain()
+void Simulation::create_swap_chain()
 {
     SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice);
 
@@ -280,7 +277,7 @@ void Simulation::createSwapChain()
     _swap_chain.swap_chain_extent = extent;
 }
 
-void Simulation::createImageViews()
+void Simulation::create_image_views()
 {
     _swap_chain.swapChainImageViews.resize(_swap_chain.swapChainImages.size());
 
@@ -291,7 +288,7 @@ void Simulation::createImageViews()
         _swap_chain.swapChainImageViews[i] = createImageView(_swap_chain.swapChainImages[i], _swap_chain.swap_chain_image_format, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
-void Simulation::createRenderPass()
+void Simulation::create_scene_render_pass()
 {
     /* COLOR ATTACHMENT */
     VkAttachmentDescription colorAttachment {};
@@ -352,12 +349,9 @@ void Simulation::createRenderPass()
     {
         throw std::runtime_error("Failed to create render pass. :( \n");
     }
-
-    /* Offscreen render pass */
-    prepareOffscreenRenderPass();
 }
 
-void Simulation::createDescriptorSetLayout()
+void Simulation::create_descriptor_set_layout()
 {
     /* Binding to UniformBufferObject structure. */
     VkDescriptorSetLayoutBinding uboLayoutBinding = {};
@@ -386,13 +380,10 @@ void Simulation::createDescriptorSetLayout()
         throw std::runtime_error("Failed to create Descriptor Set Layout. :( \n");
 }
 
-void Simulation::createGraphicsPipeline()
+void Simulation::create_graphics_pipeline()
 {
-    auto vertShaderCode = readFile("shaders/vert.spv");
-    auto fragShaderCode = readFile("shaders/frag.spv");
-
-    VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
-    VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+    VkShaderModule vertShaderModule = createShaderModule(readFile(VERT_SHADER));
+    VkShaderModule fragShaderModule = createShaderModule(readFile(FRAG_SHADER));
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -498,16 +489,6 @@ void Simulation::createGraphicsPipeline()
     colorBlendAttachment.srcAlphaBlendFactor  = VK_BLEND_FACTOR_ONE;
     colorBlendAttachment.dstAlphaBlendFactor  = VK_BLEND_FACTOR_ZERO;
     colorBlendAttachment.alphaBlendOp         = VK_BLEND_OP_ADD;
-   
-    /* Alpha blending - Most common way for color blending.
-    colorBlendAttachment.blendEnable = VK_TRUE;
-    colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-    colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-    colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-    colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-    colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
-    */
 
     VkPipelineColorBlendStateCreateInfo colorBlending = {};
     colorBlending.sType  = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -574,7 +555,7 @@ void Simulation::createGraphicsPipeline()
         throw std::runtime_error("Failed to create Graphics Pipeline! :( \n");
 
     /* Offscreen Pipeline - vertex shader only */
-    vertShaderStageInfo.module = createShaderModule(readFile("shaders/offscreen_vert.spv"));
+    vertShaderStageInfo.module = createShaderModule(readFile(OFFSCREEN_VERT_SHADER));
     shaderStages[0] = vertShaderStageInfo;
 
     pipelineInfo.stageCount = 1;
@@ -597,11 +578,10 @@ void Simulation::createGraphicsPipeline()
     /* Tidy up unused objects */
     vkDestroyShaderModule(device, fragShaderModule, nullptr);
     vkDestroyShaderModule(device, vertShaderModule, nullptr);
-
     vkDestroyShaderModule(device, vertShaderStageInfo.module, nullptr);
 }
 
-void Simulation::createFramebuffers()
+void Simulation::create_scene_framebuffer()
 {
     _scene_pass.framebuffers.resize(_swap_chain.swapChainImages.size());
 
@@ -621,11 +601,9 @@ void Simulation::createFramebuffers()
         if(vkCreateFramebuffer(device, &framebufferInfo, nullptr, &_scene_pass.framebuffers[i]) != VK_SUCCESS)
             throw std::runtime_error("Failed to create framebuffer :( \n");
     }
-
-    createOffscreenFramebuffer();
 }
 
-void Simulation::createOffscreenFramebuffer()
+void Simulation::create_offscreen_framebuffer()
 {
     // Create frame buffer and connect it with created render pass. 
     VkFramebufferCreateInfo framebufferCreateInfo {};
@@ -642,7 +620,7 @@ void Simulation::createOffscreenFramebuffer()
 }
 
 /* Crate render pass for offscreen frame buffer */
-void Simulation::prepareOffscreenRenderPass()
+void Simulation::create_offscreen_render_pass()
 {
     VkAttachmentDescription depthAttachment{};
     depthAttachment.format  = DEPTH_FORMAT;
@@ -695,7 +673,7 @@ void Simulation::prepareOffscreenRenderPass()
         throw std::runtime_error("Failed to create render pass. :( \n");
 }
 
-void Simulation::createCommandPool()
+void Simulation::create_command_pool()
 {
     QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice);
 
@@ -708,7 +686,7 @@ void Simulation::createCommandPool()
         throw std::runtime_error("Failed to create command pool :( \n");
 }
 
-void Simulation::createTextureSamper()
+void Simulation::create_depth_texture_sampler()
 {
     /* Offscreen depth map sampler */
     /* Samplers are user to read texels. They can apply filtering and other transformations to compute final color that is retrieved from sampler. */
@@ -747,7 +725,7 @@ void Simulation::createTextureSamper()
         throw std::runtime_error("Failed to create offscreen texture sampler! :( \n");
 }
 
-void Simulation::loadModel()
+void Simulation::load_model()
 {
     /* Vertex attributes */
     tinyobj::attrib_t attrib;
@@ -793,9 +771,10 @@ void Simulation::loadModel()
             };
     
             vertex.color =  {
-                attrib.colors[3 * index.vertex_index+0]/4.f,
-                attrib.colors[3 * index.vertex_index+1]/4.f,
-                attrib.colors[3 * index.vertex_index+2]/4.f
+                /*attrib.colors[3 * index.vertex_index+0],
+                attrib.colors[3 * index.vertex_index+1],
+                attrib.colors[3 * index.vertex_index+2] */
+                0.4f, 0.4f, 0.4f
             };
 
             /* Check if same vertex has been already read. */
@@ -815,53 +794,44 @@ void Simulation::loadModel()
     );
     float minY = (minElement.first.pos.y);
 
-    /* Vertices count before floor insertion. */
-    int count = _vertices.size();
-
-    /* Add floor vertices. */
-    glm::vec3 floor_color   = {0.5f, 0.5f, 0.5f};
-    glm::vec2 floor_tex     = {1.f, 1.f};
-    glm::vec3 floor_normal  = glm::vec3(0.f, 1.f, 0.f);
-
-    Vertex v1   = {};
-    v1.pos      = {-5.f, minY, -5.f};
-    v1.color    = floor_color;
-    v1.normal   = floor_normal;
-    v1.texCoord = {0.f, 0.f};;
-
-    Vertex v2   = {};
-    v2.pos      = {-5.f, minY, 5.f};
-    v2.color    = floor_color;
-    v2.normal   = floor_normal;
-    v2.texCoord = {1.f, 1.f};;
-
-    Vertex v3   = {};
-    v3.pos      = {5.f, minY, 5.f};
-    v3.color    = floor_color;
-    v3.normal   = floor_normal;
-    v3.texCoord = {0.f, 1.f};;
-
-    Vertex v4   = {};
-    v4.pos      = {5.f, minY, -5.f};
-    v4.color    = floor_color;
-    v4.normal   = floor_normal;
-    v4.texCoord = {0.f, 1.f};;
-
-    _vertices.push_back(v1);
-    _vertices.push_back(v2);
-    _vertices.push_back(v3);
-    _vertices.push_back(v4);
-
-    _indices.push_back(count+0); /* v1 */
-    _indices.push_back(count+1); /* v2 */
-    _indices.push_back(count+2); /* v3 */
-
-    _indices.push_back(count+0); /* v1 */
-    _indices.push_back(count+2); /* v3 */
-    _indices.push_back(count+3); /* v4 */
+    add_quad_under_model(minY, _vertices.size(), 7.f);
 }
 
-void Simulation::createDepthResources()
+void Simulation::add_quad_under_model(float minY, int count, float quad_coord)
+{
+    /* Add floor vertices. */
+    glm::vec3 floor_color = { 0.5f, 0.5f, 0.5f };
+    glm::vec3 floor_normal = glm::vec3(0.f, 1.f, 0.f);
+
+    Vertex vert = {};
+    vert.pos    = { -quad_coord, minY, -quad_coord };
+    vert.color  = floor_color;
+    vert.normal = floor_normal;
+    vert.texCoord = { 0.f, 0.f };
+    _vertices.push_back(vert);
+
+    vert.pos        = { -quad_coord, minY, quad_coord };
+    vert.texCoord   = { 1.f, 1.f };
+    _vertices.push_back(vert);
+
+    vert.pos        = { quad_coord, minY, quad_coord };
+    vert.texCoord   = { 0.f, 1.f };
+    _vertices.push_back(vert);
+
+    vert.pos        = { quad_coord, minY, -quad_coord };
+    vert.texCoord   = { 0.f, 1.f };
+    _vertices.push_back(vert);
+
+    _indices.push_back(count + 0); /* v1 */
+    _indices.push_back(count + 1); /* v2 */
+    _indices.push_back(count + 2); /* v3 */
+
+    _indices.push_back(count + 0); /* v1 */
+    _indices.push_back(count + 2); /* v3 */
+    _indices.push_back(count + 3); /* v4 */
+}
+
+void Simulation::create_depth_resources()
 {
     /* Create vkImage object with given properties */
     createImage(_swap_chain.swap_chain_extent.width,
@@ -875,7 +845,10 @@ void Simulation::createDepthResources()
         );
     
     /* Crate Image view bound to previously created depth image */
-    _scene_pass.depth.image_view = createImageView(_scene_pass.depth.image, DEPTH_FORMAT, VK_IMAGE_ASPECT_DEPTH_BIT);
+    _scene_pass.depth.image_view = createImageView(_scene_pass.depth.image, 
+        DEPTH_FORMAT, 
+        VK_IMAGE_ASPECT_DEPTH_BIT
+    );
 
     /* Create Image for depth map. Offscreen */
     createImage(_windowWidth, 
@@ -895,7 +868,7 @@ void Simulation::createDepthResources()
     );
 }
 
-void Simulation::createVertexBuffer()
+void Simulation::create_vertex_buffer()
 {
     VkDeviceSize bufferSize = sizeof(_vertices[0]) * _vertices.size();
 
@@ -935,7 +908,7 @@ void Simulation::createVertexBuffer()
     vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
-void Simulation::createIndexBuffer()
+void Simulation::create_index_buffer()
 {
     VkDeviceSize bufferSize = sizeof(_indices[0]) * _indices.size();
     
@@ -976,7 +949,7 @@ void Simulation::createIndexBuffer()
     vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
-void Simulation::createUniformBuffers()
+void Simulation::create_uniform_buffers()
 {
     VkDeviceSize bufferSize = sizeof(uboBufferObj);
 
@@ -1014,7 +987,7 @@ void Simulation::createUniformBuffers()
     _offscreen_buffer.descriptor.range      = VK_WHOLE_SIZE; 
 }
 
-void Simulation::createDescriptorPool()
+void Simulation::create_descriptor_pool()
 {
     /* Provide information about descriptors type of our descriptor sets and how many of them. 
     *  This structure is referenced in by the main VkDescriptorPoolCreateInfo structure. 
@@ -1038,7 +1011,7 @@ void Simulation::createDescriptorPool()
         throw std::runtime_error("Failed to create descriptor pool. :( \n");
 }
 
-void Simulation::createDescriptorSets()
+void Simulation::create_descriptor_sets()
 {
     /* We will create one descriptor set for each swap chain image- all with the same layout. */
     std::vector<VkDescriptorSetLayout> layouts(_swap_chain.swapChainImages.size(), descriptorSetLayout);
@@ -1142,7 +1115,7 @@ void Simulation::createDescriptorSets()
     );
 }
 
-void Simulation::createCommandBuffers()
+void Simulation::create_command_buffers()
 {
     // Allocate and record commands for each swap chain image.
     _command_buffers.resize(_scene_pass.framebuffers.size());
@@ -1285,7 +1258,7 @@ void Simulation::createCommandBuffers()
     }
 }
 
-void Simulation::createSyncObjects()
+void Simulation::create_sync_objects()
 {
     _sync_obj._image_available_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
     _sync_obj._render_finished_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
@@ -1311,7 +1284,7 @@ void Simulation::createSyncObjects()
     }
 }
 
-void Simulation::createSurface()
+void Simulation::create_surface()
 {
     if( glfwCreateWindowSurface(instance, _window, nullptr, &surface) != VK_SUCCESS)
     {
@@ -1702,13 +1675,14 @@ void Simulation::updateOffscreenBuffer()
     _uboOffscreenVS.view = glm::lookAt(lightPos, glm::vec3(0.0f, 0.f, 0.f), glm::vec3(0, 1, 0));
     _uboOffscreenVS.model = glm::mat4(1.0f);
 
+    void* data;
     vkMapMemory( device,
         _offscreen_buffer.memory,
         0,
         VK_WHOLE_SIZE,
         0, 
-        &_offscreen_buffer.mapped);
-    memcpy(_offscreen_buffer.mapped, &_uboOffscreenVS, sizeof(_uboOffscreenVS));
+        &data);
+    memcpy(data, &_uboOffscreenVS, sizeof(_uboOffscreenVS));
     vkUnmapMemory(device, _offscreen_buffer.memory);
 }
 
@@ -1921,16 +1895,16 @@ void Simulation::recreateSwapChain()
 
     cleanupSwapChain();
 
-    createSwapChain();
-    createImageViews();
-    createRenderPass();
-    createGraphicsPipeline();
-    createDepthResources();
-    createFramebuffers();
-    createUniformBuffers();
-    createDescriptorPool();
-    createDescriptorSets();
-    createCommandBuffers();
+    create_swap_chain();
+    create_image_views();
+    create_scene_render_pass();
+    create_graphics_pipeline();
+    create_depth_resources();
+    create_scene_framebuffer();
+    create_uniform_buffers();
+    create_descriptor_pool();
+    create_descriptor_sets();
+    create_command_buffers();
 }
 
 void Simulation::cleanupSwapChain()
@@ -1963,7 +1937,7 @@ void Simulation::cleanupSwapChain()
     vkDestroyDescriptorPool(device, _descriptor_pool, nullptr);
 }
 
-void Simulation::initGLFW()
+void Simulation::init_GLFW()
 {
     /* Init GLFW */
     if( glfwInit() == GLFW_FALSE )
@@ -1973,7 +1947,7 @@ void Simulation::initGLFW()
     }
 }
 
-void Simulation::initWindow()
+void Simulation::init_GLFW_window()
 {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
@@ -2031,7 +2005,7 @@ bool Simulation::isDeviceSuitable(VkPhysicalDevice device)
 {
     QueueFamilyIndices indices = findQueueFamilies(device);
 
-    bool extensionSupported = checkDeviceExtensionSupport(device);
+    bool extensionSupported = check_device_extension_support(device);
 
     bool swapChainAdequate = false;
     if( extensionSupported )
@@ -2046,7 +2020,7 @@ bool Simulation::isDeviceSuitable(VkPhysicalDevice device)
     return indices.isComplete() && extensionSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
 }
 
-void Simulation::drawFrame()
+void Simulation::draw_frame()
 {
     // Wait for previous frame to be finished. 
     vkWaitForFences(device, 1, &_sync_obj.inFlightFences[_currentFrame], VK_TRUE, UINT64_MAX);
@@ -2146,12 +2120,12 @@ void Simulation::drawFrame()
     _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
-void Simulation::mainLoop()
+void Simulation::main_loop()
 {
     while(!glfwWindowShouldClose(_window)) 
     {
         glfwPollEvents();
-        drawFrame();
+        draw_frame();
     }
 
     vkDeviceWaitIdle(device);
