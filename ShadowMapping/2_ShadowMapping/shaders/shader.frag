@@ -47,9 +47,20 @@ float shadowCalc(vec4 shadowCoord)
         float dist = texture( shadowMapTex, shadowCoord.st).r;
         if ( shadowCoord.w > 0.0 && dist < shadowCoord.z ) 
         {
-            shadow = 1.0;
+            //shadow = 1.0;
+            vec2 texelSize = 1.0 / textureSize(shadowMapTex, 0);
+            for(int x = -1; x <= 1; ++x)
+            {
+                for(int y = -1; y <= 1; ++y)
+                {
+                    float pcfDepth = texture(shadowMapTex, shadowCoord.xy + vec2(x, y) * texelSize).r; 
+                    shadow += shadowCoord.z > pcfDepth ? 1.0 : 0.0;
+                }
+            }
         }
     }
+    shadow /= 9.0;
+
     return shadow;
 }
 

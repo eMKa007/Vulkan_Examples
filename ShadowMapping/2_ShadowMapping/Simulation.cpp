@@ -1724,21 +1724,9 @@ void Simulation::update_keyboard_input()
         _camera.move(_time.dt, DOWNWARD);
     }
 
-
-
-    if( glfwGetKey( _window, GLFW_KEY_UP ) == GLFW_PRESS )
+    if( glfwGetKey( _window, GLFW_KEY_L ) == GLFW_PRESS )
     {
-        _light.light_pos.x += 0.1f;
-    }
-
-    if( glfwGetKey( _window, GLFW_KEY_DOWN ) == GLFW_PRESS )
-    {
-        _light.light_pos.y -= 0.1f;
-    }
-
-    if( glfwGetKey( _window, GLFW_KEY_LEFT ) == GLFW_PRESS )
-    {
-        _light.light_pos.z += 0.1f;
+        _light.move_light = !_light.move_light;
     }
 
 }

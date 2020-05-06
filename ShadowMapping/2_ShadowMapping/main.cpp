@@ -4,7 +4,7 @@ int main(int argc, char* argv[])
 {
     try
     {
-        std::unique_ptr<Simulation> app = std::make_unique<Simulation>(800, 600, "VulkanWindow");
+        std::unique_ptr<Simulation> app = std::make_unique<Simulation>(1024, 768, "Shadow Mapping - Vulkan");
         app->run();
     } 
     catch ( const std::exception& ex)
