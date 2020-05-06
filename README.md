@@ -1,6 +1,12 @@
 # Vulkan Examples
 Vulkan API learning repository. 
 
+Within this repository aditional libaries are used:
+   * [GLFW](https://github.com/glfw/glfw) - window and input handling.
+   * [GLM](https://github.com/g-truc/glm) - C++ mathematics library for graphics software.
+   * [tinyobjectloader](https://github.com/tinyobjloader/tinyobjloader) - Loading models from *.obj files.
+   * [stb image](https://github.com/nothings/stb) - Loading images to be used as textures.
+
 ## Vulkan_Tutorial
 Project which follows "Vulkan Tutorial" by Alexander Overvoorde available on [vulkan-tutorial website](https://vulkan-tutorial.com/) and [github repository](https://github.com/Overv/VulkanTutorial).
 
