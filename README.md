@@ -15,3 +15,19 @@ Main topics covered in tutorial:
   * Command buffers
   * Image view and sampler
   * Depth buffering 
+
+-----
+## ShadowMapping
+Calculating shadows based on 'Vulkan_Tutorial' project and Mr. Sascha Willems "Vulkan-Example" repository available [here](https://github.com/SaschaWillems/Vulkan/tree/master/examples/shadowmapping). 
+
+Shadow creation is divided into two render passes:
+   * First one- 'offscreen' render pass is used to calculate depth map from light's point of view (ortographic projection to simulate sunlight). Calculated depth map is stored into texture and used in second render pass.
+   * Second one- 'scene' render pass uses depth texture to determine if specified fragment is placed within or not in shadow.
+   
+Logic of shadow mapping technique is well described in [learningopengl.com website](https://learnopengl.com/Advanced-Lighting/Shadows/Shadow-Mapping) and [opengl-tutorial.org](https://www.opengl-tutorial.org/intermediate-tutorials/tutorial-16-shadow-mapping/)
+
+Camera movement:
+   * W/A/S/D keys to move camera forward/left/backward/right.
+   * Mouse to rotate camera around.
+
+<img src="https://github.com/eMKa007/Vulkan_Examples/blob/Shadow_Mapping/screens/shadow_map_vulkan.gif?raw=true" width="500" height="350" />
