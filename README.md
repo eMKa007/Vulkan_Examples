@@ -36,4 +36,7 @@ Camera movement:
    * W/A/S/D keys to move camera forward/left/backward/right.
    * Mouse to rotate camera around.
 
+**Prepared build:**
+   Visual Studio [Debug|Release] x86
+
 <img src="https://github.com/eMKa007/Vulkan_Examples/blob/Shadow_Mapping/screens/shadow_map_vulkan.gif?raw=true" width="500" height="350" />
